@@ -1,0 +1,106 @@
+.survey-layout {
+    display: flex;
+    gap: 2rem;
+    padding-top: 50px;
+    align-items: flex-start;
+}
+
+.survey-left {
+    flex: 2;
+}
+
+.survey-right {
+    flex: 1;
+    position: sticky;
+    top: 100px;
+    background: #fff;
+    border-left: 1px solid #ddd;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.survey-title {
+    margin-bottom: 1rem;
+}
+
+.survey-input {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.date-group {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.question-card {
+    background: #f9f9ff;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 1rem;
+    transition: 0.2s ease;
+}
+
+.question-card:hover {
+    background: #f3f6ff;
+}
+
+.question-input {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background: transparent;
+    font-size: 1rem;
+    padding: 0.3rem;
+}
+
+.option-input {
+    width: 100%;
+    margin: 0.25rem 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.4rem;
+}
+
+.add-option-btn,
+.add-question-btn {
+    background: #0047f9;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    cursor: pointer;
+}
+
+.tab-buttons {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 1rem;
+}
+
+.tab-buttons button {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.tab-buttons button.active {
+    border-bottom: 2px solid #0047f9;
+    color: #0047f9;
+}
+
+.tab-content {
+    font-size: 0.95rem;
+}

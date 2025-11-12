@@ -1,11 +1,19 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api";
+const api = axios.create({
+    baseURL: "http://localhost:8080", // 👉 여기에 실제 백엔드 baseURL 입력
+});
 
-export const signup = async (data) => {
-    return axios.post(`${API_URL}/auth/signup`, data);
+// 회원가입
+export const registerUser = async (data) => {
+    const res = await api.post("/api/auth/register", data);
+    return res.data;
 };
 
-export const login = async (data) => {
-    return axios.post(`${API_URL}/auth/login`, data);
+// 로그인
+export const loginUser = async (data) => {
+    const res = await api.post("/api/auth/login", data);
+    return res.data;
 };
+
+export default api;
