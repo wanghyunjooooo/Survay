@@ -4,7 +4,7 @@ import "../styles/SurveyEditContent.css";
 
 function SurveyEditContent({ surveyId }) {
     const [questions, setQuestions] = useState([
-        { id: 1, question: "", options: [""] },
+        { id: Date.now(), question: "", options: [""] },
     ]);
     const [activeTab, setActiveTab] = useState("목차");
 
@@ -14,6 +14,11 @@ function SurveyEditContent({ surveyId }) {
             ...questions,
             { id: Date.now(), question: "", options: [""] },
         ]);
+    };
+
+    // 질문 삭제
+    const deleteQuestion = (id) => {
+        setQuestions(questions.filter((q) => q.id !== id));
     };
 
     // 질문 업데이트
@@ -47,9 +52,17 @@ function SurveyEditContent({ surveyId }) {
         );
     };
 
+    // 카드 드래그 순서 변경
+    const moveQuestion = (dragIndex, hoverIndex) => {
+        const newQuestions = [...questions];
+        const [removed] = newQuestions.splice(dragIndex, 1);
+        newQuestions.splice(hoverIndex, 0, removed);
+        setQuestions(newQuestions);
+    };
+
     return (
         <div className="survey-layout">
-            {/* 왼쪽 - 설문 폼 */}
+            {/* 왼쪽: 설문 폼 */}
             <div className="survey-left">
                 <input
                     type="text"
@@ -60,7 +73,6 @@ function SurveyEditContent({ surveyId }) {
                     className="survey-input desc-input"
                     placeholder="설문 설명을 입력하세요"
                 />
-
                 <div className="date-group">
                     <label>
                         시작일: <input type="date" />
@@ -71,16 +83,28 @@ function SurveyEditContent({ surveyId }) {
                 </div>
 
                 <div className="question-section">
-                    <h4>질문</h4>
                     <AnimatePresence>
-                        {questions.map((q) => (
+                        {questions.map((q, index) => (
                             <motion.div
                                 key={q.id}
+                                layout
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                drag="y"
+                                dragConstraints={{ top: 0, bottom: 500 }}
+                                onDragEnd={() => {}}
                                 className="question-card"
                             >
+                                <div className="question-header">
+                                    <span>질문 {index + 1}</span>
+                                    <button
+                                        className="delete-btn"
+                                        onClick={() => deleteQuestion(q.id)}
+                                    >
+                                        삭제
+                                    </button>
+                                </div>
                                 <input
                                     type="text"
                                     className="question-input"
@@ -122,7 +146,7 @@ function SurveyEditContent({ surveyId }) {
                 </div>
             </div>
 
-            {/* 오른쪽 - 탭 패널 */}
+            {/* 오른쪽 탭 패널 */}
             <div className="survey-right">
                 <div className="tab-buttons">
                     {["목차", "꾸미기", "설문 설정"].map((tab) => (
@@ -139,9 +163,9 @@ function SurveyEditContent({ surveyId }) {
                 <div className="tab-content">
                     {activeTab === "목차" && (
                         <ul>
-                            {questions.map((q) => (
+                            {questions.map((q, index) => (
                                 <li key={q.id}>
-                                    {q.question || `질문 ${q.id}`}
+                                    {q.question || `질문 ${index + 1}`}
                                 </li>
                             ))}
                         </ul>
@@ -159,6 +183,10 @@ function SurveyEditContent({ surveyId }) {
                             <label>
                                 배경색:
                                 <input type="color" />
+                            </label>
+                            <label>
+                                설문 커버 이미지:
+                                <input type="file" />
                             </label>
                         </div>
                     )}

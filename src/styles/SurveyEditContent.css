@@ -1,106 +1,254 @@
+/* ============================================ */
+/* 전체 레이아웃 */
+/* ============================================ */
 .survey-layout {
     display: flex;
     gap: 2rem;
     padding-top: 50px;
     align-items: flex-start;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ============================================ */
+/* 왼쪽 설문 폼 */
+/* ============================================ */
 .survey-left {
     flex: 2;
 }
 
+/* 설문 제목 입력 */
+.title-input {
+    width: 100%;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.title-input:focus {
+    border-color: #0047f9;
+    box-shadow: 0 0 0 3px rgba(0, 71, 249, 0.15);
+}
+
+/* 설문 설명 */
+.desc-input {
+    width: 100%;
+    min-height: 80px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    font-size: 1rem;
+    resize: vertical;
+    outline: none;
+}
+
+.desc-input:focus {
+    border-color: #0047f9;
+    box-shadow: 0 0 0 2px rgba(0, 71, 249, 0.1);
+}
+
+/* 날짜 그룹 */
+.date-group {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.date-group label {
+    flex: 1;
+    font-weight: 500;
+}
+
+.date-group input {
+    width: 100%;
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.date-group input:focus {
+    border-color: #0047f9;
+    box-shadow: 0 0 0 2px rgba(0, 71, 249, 0.1);
+}
+
+/* ============================================ */
+/* 질문 카드 */
+/* ============================================ */
+.question-card {
+    background: #f9f9ff;
+    padding: 1rem 1.5rem;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    margin-bottom: 1.2rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    cursor: grab;
+}
+
+.question-card:active {
+    cursor: grabbing;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.question-card:hover {
+    background: #f3f6ff;
+    transform: translateY(-2px);
+}
+
+/* 질문 헤더 */
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* 삭제 버튼 */
+.delete-btn {
+    background: #ff4d4f;
+    color: #fff;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-btn:hover {
+    background: #e43d3f;
+}
+
+/* 질문 입력 필드 */
+.question-input {
+    width: 100%;
+    margin-bottom: 0.6rem;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    padding: 0.5rem 0.8rem;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.question-input:focus {
+    border-color: #0047f9;
+    box-shadow: 0 0 0 2px rgba(0, 71, 249, 0.1);
+}
+
+/* 옵션 입력 필드 */
+.option-input {
+    width: 100%;
+    margin: 0.3rem 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.option-input:focus {
+    border-color: #0047f9;
+    box-shadow: 0 0 0 2px rgba(0, 71, 249, 0.08);
+}
+
+/* 버튼 */
+.add-option-btn,
+.add-question-btn {
+    background: #0047f9;
+    color: white;
+    border: none;
+    padding: 0.55rem 1rem;
+    border-radius: 12px;
+    margin-top: 0.6rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.add-option-btn:hover,
+.add-question-btn:hover {
+    background: #0033c4;
+}
+
+/* ============================================ */
+/* 오른쪽 탭 컨테이너 */
+/* ============================================ */
 .survey-right {
     flex: 1;
     position: sticky;
     top: 100px;
     background: #fff;
     border-left: 1px solid #ddd;
-    padding: 1rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.survey-title {
-    margin-bottom: 1rem;
-}
-
-.survey-input {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-}
-
-.date-group {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.question-card {
-    background: #f9f9ff;
-    padding: 1rem;
-    border-radius: 10px;
-    border: 1px solid #ddd;
-    margin-bottom: 1rem;
-    transition: 0.2s ease;
-}
-
-.question-card:hover {
-    background: #f3f6ff;
-}
-
-.question-input {
-    width: 100%;
-    margin-bottom: 0.5rem;
-    border: none;
-    border-bottom: 1px solid #ccc;
-    background: transparent;
-    font-size: 1rem;
-    padding: 0.3rem;
-}
-
-.option-input {
-    width: 100%;
-    margin: 0.25rem 0;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 0.4rem;
-}
-
-.add-option-btn,
-.add-question-btn {
-    background: #0047f9;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    margin-top: 0.5rem;
-    cursor: pointer;
-}
-
+/* 탭 버튼 */
 .tab-buttons {
     display: flex;
-    justify-content: space-around;
-    margin-bottom: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid #eee;
 }
 
 .tab-buttons button {
     flex: 1;
     border: none;
     background: none;
-    padding: 0.5rem;
+    padding: 0.6rem 0;
     font-weight: 500;
     cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
 }
 
 .tab-buttons button.active {
-    border-bottom: 2px solid #0047f9;
+    border-bottom: 3px solid #0047f9;
     color: #0047f9;
+    font-weight: 600;
 }
 
+/* 탭 내용 */
 .tab-content {
     font-size: 0.95rem;
+}
+
+.tab-content label {
+    display: block;
+    margin-bottom: 0.8rem;
+    font-weight: 500;
+}
+
+.tab-content input,
+.tab-content select {
+    width: 100%;
+    padding: 0.5rem 0.8rem;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    margin-top: 0.3rem;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.tab-content input:focus,
+.tab-content select:focus {
+    border-color: #0047f9;
+    box-shadow: 0 0 0 2px rgba(0, 71, 249, 0.08);
+}
+
+.tab-content input[type="color"] {
+    padding: 0.2rem;
+    height: 2rem;
 }
