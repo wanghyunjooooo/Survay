@@ -4,46 +4,39 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/Home.css";
 import NavBar from "../components/Navbar.jsx";
 import { useNavigate } from "react-router-dom";
+import { getMySurveys } from "../api/api.js"; // API import
 
 function Home() {
-    const [activeTab, setActiveTab] = useState("my"); // my: 내 설문, joined: 참여한 설문
+    const [activeTab, setActiveTab] = useState("my");
     const [mySurveys, setMySurveys] = useState([]);
-    const [joinedSurveys, setJoinedSurveys] = useState([]);
-    const navigate = useNavigate(); // 페이지 이동
+    const [joinedSurveys, setJoinedSurveys] = useState([]); // 필요하면 API 연결
+    const navigate = useNavigate();
+
+    // ===========================
+    // 내 설문 리스트 불러오기
+    // ===========================
+    const fetchMySurveys = async () => {
+        const res = await getMySurveys();
+        if (res.success) {
+            // API에서 survey_id로 매핑
+            const surveys = res.surveys.map((s) => ({
+                id: s.survey_id,
+                title: s.title,
+                status:
+                    new Date(s.end_date) > new Date() ? "진행 중" : "종료됨",
+                endDate: s.end_date.slice(0, 10),
+            }));
+            setMySurveys(surveys);
+        } else {
+            alert("설문 리스트 불러오기 실패: " + res.message);
+        }
+    };
 
     useEffect(() => {
-        setMySurveys([
-            {
-                id: 1,
-                title: "2025 고객 만족도 조사",
-                status: "진행 중",
-                endDate: "2025-12-31",
-            },
-            {
-                id: 2,
-                title: "신제품 피드백 설문",
-                status: "종료됨",
-                endDate: "2025-11-10",
-            },
-        ]);
-        setJoinedSurveys([
-            {
-                id: 101,
-                title: "참여 설문 A",
-                status: "진행 중",
-                endDate: "2025-12-20",
-            },
-            {
-                id: 102,
-                title: "참여 설문 B",
-                status: "종료됨",
-                endDate: "2025-11-05",
-            },
-        ]);
+        fetchMySurveys();
     }, []);
 
     const handleSurveyClick = (surveyId) => {
-        // 클릭하면 EditSurvey 페이지로 이동
         navigate(`/edit-survey/${surveyId}`);
     };
 
@@ -52,7 +45,7 @@ function Home() {
             key={survey.id}
             className="list-group-item d-flex justify-content-between align-items-center survey-list-item"
             style={{ cursor: "pointer" }}
-            onClick={() => handleSurveyClick(survey.id)} // 클릭 이벤트
+            onClick={() => handleSurveyClick(survey.id)}
         >
             <div>
                 <h6 className="mb-1">{survey.title}</h6>
@@ -74,7 +67,7 @@ function Home() {
                 <button
                     className="btn btn-outline-primary btn-sm me-2"
                     onClick={(e) => {
-                        e.stopPropagation(); // li 클릭 이벤트 막기
+                        e.stopPropagation();
                         navigate(`/edit-survey/${survey.id}`);
                     }}
                 >
@@ -107,7 +100,6 @@ function Home() {
                             : "참여한 설문 리스트"}
                     </h5>
 
-                    {/* 새 설문 만들기 버튼 맨 위 */}
                     {activeTab === "my" && (
                         <div className="mb-3 d-flex justify-content-end">
                             <button

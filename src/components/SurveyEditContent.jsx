@@ -1,43 +1,93 @@
-import React, { useState } from "react";
+import React, {
+    useState,
+    useEffect,
+    forwardRef,
+    useImperativeHandle,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "../styles/SurveyEditContent.css";
 
-function SurveyEditContent({ surveyId }) {
+const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
+    // =====================
+    // 초기 state 설정
+    // =====================
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [maxParticipants, setMaxParticipants] = useState(100);
+    const [isPublic, setIsPublic] = useState(true);
     const [questions, setQuestions] = useState([
         { id: Date.now(), question: "", options: [""] },
     ]);
     const [activeTab, setActiveTab] = useState("목차");
 
-    // 질문 추가
-    const addQuestion = () => {
+    // =====================
+    // surveyData로 초기값 세팅
+    // =====================
+    useEffect(() => {
+        if (surveyData) {
+            setTitle(surveyData.title || "");
+            setDescription(surveyData.description || "");
+            setStartDate(surveyData.start_date?.slice(0, 10) || "");
+            setEndDate(surveyData.end_date?.slice(0, 10) || "");
+            setMaxParticipants(surveyData.max_participants || 100);
+            setIsPublic(surveyData.is_public ?? true);
+            setQuestions(
+                surveyData.questions?.length
+                    ? surveyData.questions.map((q, idx) => ({
+                          id: Date.now() + idx,
+                          question: q.question || "",
+                          options: q.options?.length ? q.options : [""],
+                      }))
+                    : [{ id: Date.now(), question: "", options: [""] }]
+            );
+        }
+    }, [surveyData]);
+
+    // =====================
+    // ref를 통해 부모가 상태 가져갈 수 있도록
+    // =====================
+    useImperativeHandle(ref, () => ({
+        getSurveyData: () => ({
+            title,
+            description,
+            start_date: startDate,
+            end_date: endDate,
+            max_participants: maxParticipants,
+            is_public: isPublic,
+            questions: questions.map((q) => ({
+                question: q.question,
+                options: q.options,
+            })),
+        }),
+    }));
+
+    // =====================
+    // 질문 관련 함수
+    // =====================
+    const addQuestion = () =>
         setQuestions([
             ...questions,
             { id: Date.now(), question: "", options: [""] },
         ]);
-    };
 
-    // 질문 삭제
-    const deleteQuestion = (id) => {
+    const deleteQuestion = (id) =>
         setQuestions(questions.filter((q) => q.id !== id));
-    };
 
-    // 질문 업데이트
-    const updateQuestion = (id, value) => {
+    const updateQuestion = (id, value) =>
         setQuestions(
             questions.map((q) => (q.id === id ? { ...q, question: value } : q))
         );
-    };
 
-    // 옵션 추가
-    const addOption = (qid) => {
+    const addOption = (qid) =>
         setQuestions(
             questions.map((q) =>
                 q.id === qid ? { ...q, options: [...q.options, ""] } : q
             )
         );
-    };
 
-    const updateOption = (qid, idx, value) => {
+    const updateOption = (qid, idx, value) =>
         setQuestions(
             questions.map((q) =>
                 q.id === qid
@@ -50,9 +100,7 @@ function SurveyEditContent({ surveyId }) {
                     : q
             )
         );
-    };
 
-    // 카드 드래그 순서 변경
     const moveQuestion = (dragIndex, hoverIndex) => {
         const newQuestions = [...questions];
         const [removed] = newQuestions.splice(dragIndex, 1);
@@ -60,25 +108,42 @@ function SurveyEditContent({ surveyId }) {
         setQuestions(newQuestions);
     };
 
+    // =====================
+    // 렌더링
+    // =====================
     return (
         <div className="survey-layout">
-            {/* 왼쪽: 설문 폼 */}
+            {/* 왼쪽 설문 폼 */}
             <div className="survey-left">
                 <input
                     type="text"
                     className="survey-input title-input"
                     placeholder="설문 제목을 입력하세요"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                 />
                 <textarea
                     className="survey-input desc-input"
                     placeholder="설문 설명을 입력하세요"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                 />
                 <div className="date-group">
                     <label>
-                        시작일: <input type="date" />
+                        시작일:{" "}
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
                     </label>
                     <label>
-                        종료일: <input type="date" />
+                        종료일:{" "}
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
                     </label>
                 </div>
 
@@ -93,7 +158,6 @@ function SurveyEditContent({ surveyId }) {
                                 exit={{ opacity: 0, y: -10 }}
                                 drag="y"
                                 dragConstraints={{ top: 0, bottom: 500 }}
-                                onDragEnd={() => {}}
                                 className="question-card"
                             >
                                 <div className="question-header">
@@ -139,7 +203,6 @@ function SurveyEditContent({ surveyId }) {
                             </motion.div>
                         ))}
                     </AnimatePresence>
-
                     <button className="add-question-btn" onClick={addQuestion}>
                         + 질문 추가
                     </button>
@@ -163,9 +226,9 @@ function SurveyEditContent({ surveyId }) {
                 <div className="tab-content">
                     {activeTab === "목차" && (
                         <ul>
-                            {questions.map((q, index) => (
+                            {questions.map((q, i) => (
                                 <li key={q.id}>
-                                    {q.question || `질문 ${index + 1}`}
+                                    {q.question || `질문 ${i + 1}`}
                                 </li>
                             ))}
                         </ul>
@@ -181,26 +244,37 @@ function SurveyEditContent({ surveyId }) {
                                 </select>
                             </label>
                             <label>
-                                배경색:
-                                <input type="color" />
+                                배경색: <input type="color" />
                             </label>
                             <label>
-                                설문 커버 이미지:
-                                <input type="file" />
+                                커버 이미지: <input type="file" />
                             </label>
                         </div>
                     )}
                     {activeTab === "설문 설정" && (
                         <div>
                             <label>
-                                최대 참여 수:
-                                <input type="number" />
+                                최대 참여 수:{" "}
+                                <input
+                                    type="number"
+                                    value={maxParticipants}
+                                    onChange={(e) =>
+                                        setMaxParticipants(
+                                            Number(e.target.value)
+                                        )
+                                    }
+                                />
                             </label>
                             <label>
                                 결과 공개:
-                                <select>
-                                    <option>공개</option>
-                                    <option>비공개</option>
+                                <select
+                                    value={isPublic}
+                                    onChange={(e) =>
+                                        setIsPublic(e.target.value === "true")
+                                    }
+                                >
+                                    <option value="true">공개</option>
+                                    <option value="false">비공개</option>
                                 </select>
                             </label>
                         </div>
@@ -209,6 +283,6 @@ function SurveyEditContent({ surveyId }) {
             </div>
         </div>
     );
-}
+});
 
 export default SurveyEditContent;
