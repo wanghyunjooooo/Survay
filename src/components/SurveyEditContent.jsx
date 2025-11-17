@@ -6,10 +6,11 @@ import React, {
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "../styles/SurveyEditContent.css";
+import { createPage, getPages } from "../api/api";
 
 const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
     // =====================
-    // 초기 state 설정
+    // 기본 설문 정보
     // =====================
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -17,13 +18,19 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
     const [endDate, setEndDate] = useState("");
     const [maxParticipants, setMaxParticipants] = useState(100);
     const [isPublic, setIsPublic] = useState(true);
-    const [questions, setQuestions] = useState([
-        { id: Date.now(), question: "", options: [""] },
-    ]);
-    const [activeTab, setActiveTab] = useState("목차");
 
     // =====================
-    // surveyData로 초기값 세팅
+    // 페이지 / 탭
+    // =====================
+    const [pages, setPages] = useState([]);
+    const [currentPage, setCurrentPage] = useState(null);
+    const [activeTab, setActiveTab] = useState("목차");
+
+    // 페이지별 질문 저장
+    const [pageQuestions, setPageQuestions] = useState({});
+
+    // =====================
+    // 초기 surveyData 로드
     // =====================
     useEffect(() => {
         if (surveyData) {
@@ -33,20 +40,126 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
             setEndDate(surveyData.end_date?.slice(0, 10) || "");
             setMaxParticipants(surveyData.max_participants || 100);
             setIsPublic(surveyData.is_public ?? true);
-            setQuestions(
-                surveyData.questions?.length
-                    ? surveyData.questions.map((q, idx) => ({
-                          id: Date.now() + idx,
-                          question: q.question || "",
-                          options: q.options?.length ? q.options : [""],
-                      }))
-                    : [{ id: Date.now(), question: "", options: [""] }]
-            );
         }
     }, [surveyData]);
 
     // =====================
-    // ref를 통해 부모가 상태 가져갈 수 있도록
+    // 페이지 불러오기
+    // =====================
+    useEffect(() => {
+        if (surveyId) loadPages();
+    }, [surveyId]);
+
+    const loadPages = async () => {
+        try {
+            const res = await getPages(surveyId);
+            setPages(res.pages || []);
+
+            if (res.pages?.length) {
+                const firstPageId = res.pages[0].page_id;
+                setCurrentPage(firstPageId);
+                setPageQuestions((prev) => ({
+                    ...prev,
+                    [firstPageId]: prev[firstPageId] || [
+                        {
+                            id: Date.now() + Math.random(),
+                            question: "",
+                            options: [""],
+                        },
+                    ],
+                }));
+            }
+        } catch (err) {
+            console.error("페이지 불러오기 실패:", err);
+        }
+    };
+
+    // =====================
+    // 페이지 추가
+    // =====================
+    const handleAddPage = async () => {
+        try {
+            const newPageData = {
+                title: `${pages.length + 1}번째 페이지`,
+                order_index: pages.length + 1,
+            };
+            const res = await createPage(surveyId, newPageData);
+
+            setPages([...pages, res.page]);
+
+            setPageQuestions((prev) => ({
+                ...prev,
+                [res.page.page_id]: [
+                    {
+                        id: Date.now() + Math.random(),
+                        question: "",
+                        options: [""],
+                    },
+                ],
+            }));
+
+            setCurrentPage(res.page.page_id);
+        } catch (err) {
+            console.error("페이지 추가 실패:", err);
+        }
+    };
+
+    // =====================
+    // 질문 관련
+    // =====================
+    const addQuestion = (pageId) => {
+        setPageQuestions({
+            ...pageQuestions,
+            [pageId]: [
+                ...(pageQuestions[pageId] || []),
+                { id: Date.now() + Math.random(), question: "", options: [""] },
+            ],
+        });
+    };
+
+    const deleteQuestion = (pageId, qid) => {
+        setPageQuestions({
+            ...pageQuestions,
+            [pageId]: (pageQuestions[pageId] || []).filter((q) => q.id !== qid),
+        });
+    };
+
+    const updateQuestion = (pageId, qid, value) => {
+        setPageQuestions({
+            ...pageQuestions,
+            [pageId]: (pageQuestions[pageId] || []).map((q) =>
+                q.id === qid ? { ...q, question: value } : q
+            ),
+        });
+    };
+
+    const addOption = (pageId, qid) => {
+        setPageQuestions({
+            ...pageQuestions,
+            [pageId]: (pageQuestions[pageId] || []).map((q) =>
+                q.id === qid ? { ...q, options: [...q.options, ""] } : q
+            ),
+        });
+    };
+
+    const updateOption = (pageId, qid, idx, value) => {
+        setPageQuestions({
+            ...pageQuestions,
+            [pageId]: (pageQuestions[pageId] || []).map((q) =>
+                q.id === qid
+                    ? {
+                          ...q,
+                          options: q.options.map((o, i) =>
+                              i === idx ? value : o
+                          ),
+                      }
+                    : q
+            ),
+        });
+    };
+
+    // =====================
+    // 부모로 내보내는 데이터
     // =====================
     useImperativeHandle(ref, () => ({
         getSurveyData: () => ({
@@ -56,64 +169,17 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
             end_date: endDate,
             max_participants: maxParticipants,
             is_public: isPublic,
-            questions: questions.map((q) => ({
-                question: q.question,
-                options: q.options,
-            })),
+            pages,
+            pageQuestions,
         }),
     }));
-
-    // =====================
-    // 질문 관련 함수
-    // =====================
-    const addQuestion = () =>
-        setQuestions([
-            ...questions,
-            { id: Date.now(), question: "", options: [""] },
-        ]);
-
-    const deleteQuestion = (id) =>
-        setQuestions(questions.filter((q) => q.id !== id));
-
-    const updateQuestion = (id, value) =>
-        setQuestions(
-            questions.map((q) => (q.id === id ? { ...q, question: value } : q))
-        );
-
-    const addOption = (qid) =>
-        setQuestions(
-            questions.map((q) =>
-                q.id === qid ? { ...q, options: [...q.options, ""] } : q
-            )
-        );
-
-    const updateOption = (qid, idx, value) =>
-        setQuestions(
-            questions.map((q) =>
-                q.id === qid
-                    ? {
-                          ...q,
-                          options: q.options.map((opt, i) =>
-                              i === idx ? value : opt
-                          ),
-                      }
-                    : q
-            )
-        );
-
-    const moveQuestion = (dragIndex, hoverIndex) => {
-        const newQuestions = [...questions];
-        const [removed] = newQuestions.splice(dragIndex, 1);
-        newQuestions.splice(hoverIndex, 0, removed);
-        setQuestions(newQuestions);
-    };
 
     // =====================
     // 렌더링
     // =====================
     return (
         <div className="survey-layout">
-            {/* 왼쪽 설문 폼 */}
+            {/* 왼쪽: 질문 영역 */}
             <div className="survey-left">
                 <input
                     type="text"
@@ -128,6 +194,7 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                 />
+
                 <div className="date-group">
                     <label>
                         시작일:{" "}
@@ -147,69 +214,93 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
                     </label>
                 </div>
 
-                <div className="question-section">
-                    <AnimatePresence>
-                        {questions.map((q, index) => (
-                            <motion.div
-                                key={q.id}
-                                layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                drag="y"
-                                dragConstraints={{ top: 0, bottom: 500 }}
-                                className="question-card"
-                            >
-                                <div className="question-header">
-                                    <span>질문 {index + 1}</span>
-                                    <button
-                                        className="delete-btn"
-                                        onClick={() => deleteQuestion(q.id)}
+                {/* 페이지별 컨테이너 */}
+                {pages.map((page) => (
+                    <div
+                        key={page.page_id}
+                        className={`page-container ${
+                            currentPage === page.page_id ? "active" : "hidden"
+                        }`}
+                    >
+                        <h4>{page.title}</h4>
+                        <AnimatePresence>
+                            {(pageQuestions[page.page_id] || []).map(
+                                (q, index) => (
+                                    <motion.div
+                                        key={q.id}
+                                        layout
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="question-card"
                                     >
-                                        삭제
-                                    </button>
-                                </div>
-                                <input
-                                    type="text"
-                                    className="question-input"
-                                    value={q.question}
-                                    onChange={(e) =>
-                                        updateQuestion(q.id, e.target.value)
-                                    }
-                                    placeholder="질문을 입력하세요"
-                                />
-                                {q.options.map((opt, i) => (
-                                    <input
-                                        key={i}
-                                        type="text"
-                                        className="option-input"
-                                        value={opt}
-                                        onChange={(e) =>
-                                            updateOption(
-                                                q.id,
-                                                i,
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder={`보기 ${i + 1}`}
-                                    />
-                                ))}
-                                <button
-                                    className="add-option-btn"
-                                    onClick={() => addOption(q.id)}
-                                >
-                                    + 보기 추가
-                                </button>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                    <button className="add-question-btn" onClick={addQuestion}>
-                        + 질문 추가
-                    </button>
-                </div>
+                                        <div className="question-header">
+                                            <span>질문 {index + 1}</span>
+                                            <button
+                                                className="delete-btn"
+                                                onClick={() =>
+                                                    deleteQuestion(
+                                                        page.page_id,
+                                                        q.id
+                                                    )
+                                                }
+                                            >
+                                                삭제
+                                            </button>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            className="question-input"
+                                            value={q.question}
+                                            onChange={(e) =>
+                                                updateQuestion(
+                                                    page.page_id,
+                                                    q.id,
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder="질문을 입력하세요"
+                                        />
+                                        {q.options.map((opt, i) => (
+                                            <input
+                                                key={i}
+                                                type="text"
+                                                className="option-input"
+                                                value={opt}
+                                                onChange={(e) =>
+                                                    updateOption(
+                                                        page.page_id,
+                                                        q.id,
+                                                        i,
+                                                        e.target.value
+                                                    )
+                                                }
+                                                placeholder={`보기 ${i + 1}`}
+                                            />
+                                        ))}
+                                        <button
+                                            className="add-option-btn"
+                                            onClick={() =>
+                                                addOption(page.page_id, q.id)
+                                            }
+                                        >
+                                            + 보기 추가
+                                        </button>
+                                    </motion.div>
+                                )
+                            )}
+                        </AnimatePresence>
+                        <button
+                            className="add-question-btn"
+                            onClick={() => addQuestion(page.page_id)}
+                        >
+                            + 질문 추가
+                        </button>
+                    </div>
+                ))}
             </div>
 
-            {/* 오른쪽 탭 패널 */}
+            {/* 오른쪽: 탭 */}
             <div className="survey-right">
                 <div className="tab-buttons">
                     {["목차", "꾸미기", "설문 설정"].map((tab) => (
@@ -225,16 +316,42 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
 
                 <div className="tab-content">
                     {activeTab === "목차" && (
-                        <ul>
-                            {questions.map((q, i) => (
-                                <li key={q.id}>
-                                    {q.question || `질문 ${i + 1}`}
-                                </li>
-                            ))}
-                        </ul>
+                        <>
+                            <h3>📄 페이지 목록</h3>
+                            <ul>
+                                {pages.map((p) => (
+                                    <li
+                                        key={p.page_id}
+                                        onClick={() =>
+                                            setCurrentPage(p.page_id)
+                                        }
+                                        style={{
+                                            cursor: "pointer",
+                                            fontWeight:
+                                                currentPage === p.page_id
+                                                    ? "bold"
+                                                    : "normal",
+                                            color:
+                                                currentPage === p.page_id
+                                                    ? "#5a2dff"
+                                                    : "black",
+                                        }}
+                                    >
+                                        {p.order_index}. {p.title}
+                                    </li>
+                                ))}
+                            </ul>
+                            <button
+                                className="add-page-btn"
+                                onClick={handleAddPage}
+                            >
+                                + 페이지 추가
+                            </button>
+                        </>
                     )}
+
                     {activeTab === "꾸미기" && (
-                        <div>
+                        <>
                             <label>
                                 글꼴:
                                 <select>
@@ -249,10 +366,11 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
                             <label>
                                 커버 이미지: <input type="file" />
                             </label>
-                        </div>
+                        </>
                     )}
+
                     {activeTab === "설문 설정" && (
-                        <div>
+                        <>
                             <label>
                                 최대 참여 수:{" "}
                                 <input
@@ -277,7 +395,7 @@ const SurveyEditContent = forwardRef(({ surveyId, surveyData }, ref) => {
                                     <option value="false">비공개</option>
                                 </select>
                             </label>
-                        </div>
+                        </>
                     )}
                 </div>
             </div>
