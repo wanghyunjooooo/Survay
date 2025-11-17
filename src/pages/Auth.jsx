@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/Auth.css";
 import { Eye, EyeOff } from "lucide-react";
 import { registerUser, loginUser } from "../api/api.js";
-import { useNavigate } from "react-router-dom"; // ✅ 추가
+import { useNavigate } from "react-router-dom";
 
 function Auth() {
     const [isLogin, setIsLogin] = useState(true);
@@ -13,10 +13,11 @@ function Auth() {
     const [name, setName] = useState("");
     const [repeatPassword, setRepeatPassword] = useState("");
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate(); // ✅ 네비게이터 생성
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (!isLogin && password !== repeatPassword) {
             alert("비밀번호가 일치하지 않습니다.");
             return;
@@ -25,26 +26,38 @@ function Auth() {
         try {
             setLoading(true);
 
-            if (isLogin) {
-                // 🔹 로그인 요청
-                const res = await loginUser({ email, password });
-                localStorage.setItem("token", res.token);
-                localStorage.setItem("user", JSON.stringify(res.user));
-                alert(`${res.user.name}님, 로그인 성공!`);
-                console.log("로그인 성공:", res);
+            console.log("===== 요청 시작 =====");
+            console.log("isLogin:", isLogin);
+            console.log("email:", email);
+            console.log("password:", password);
+            if (!isLogin) console.log("name:", name);
 
-                // ✅ 로그인 성공 시 홈으로 이동
+            if (isLogin) {
+                const data = await loginUser({ email, password });
+                console.log("서버 응답:", data);
+
+                if (!data.user || !data.token)
+                    throw new Error("서버 응답이 올바르지 않습니다.");
+
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("user", JSON.stringify(data.user));
+                alert(`${data.user.name}님, 로그인 성공!`);
                 navigate("/home");
             } else {
-                // 🔹 회원가입 요청
-                const res = await registerUser({ email, password, name });
-                alert(`${res.message} (${res.user.name})`);
-                console.log("회원가입 성공:", res);
+                const data = await registerUser({ email, password, name });
+                console.log("서버 응답:", data);
+
+                if (!data.user || !data.success)
+                    throw new Error("서버 응답이 올바르지 않습니다.");
+
+                alert(`${data.message || "회원가입 완료"} (${data.user.name})`);
                 setIsLogin(true);
             }
         } catch (err) {
-            console.error(err);
-            alert("오류가 발생했습니다. 다시 시도해주세요.");
+            console.error("===== 에러 발생 =====");
+            console.error("err:", err);
+            console.error("err.response?.data:", err.response?.data);
+            alert(err.response?.data?.message || err.message || "오류 발생");
         } finally {
             setLoading(false);
         }
