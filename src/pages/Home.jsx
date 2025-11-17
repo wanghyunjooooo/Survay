@@ -133,7 +133,7 @@ function Home() {
                         <div className="mb-3 d-flex justify-content-end">
                             <button
                                 className="btn btn-primary"
-                                onClick={() => navigate("/edit-survey/new")}
+                                onClick={() => navigate("/new-survey")} // ← 변경: 유형 선택 화면으로 이동
                             >
                                 <PlusCircle size={16} className="me-1" /> 새
                                 설문 만들기
