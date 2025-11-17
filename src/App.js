@@ -1,3 +1,4 @@
+// src/App.js
 import React from "react";
 import {
     BrowserRouter as Router,
@@ -8,6 +9,7 @@ import {
 import Login from "./pages/Auth";
 import Home from "./pages/Home"; // 메인 홈 페이지
 import EditSurvey from "./pages/EditSurvey"; // 설문 수정 페이지
+import SurveyParticipate from "./pages/SurveyParticipate"; // 설문 참여 페이지
 
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -27,6 +29,12 @@ function App() {
 
                 {/* 설문 수정 페이지 */}
                 <Route path="/edit-survey/:id" element={<EditSurvey />} />
+
+                {/* 설문 참여 페이지 (공유 링크) */}
+                <Route
+                    path="/survey/:shareLink"
+                    element={<SurveyParticipate />}
+                />
 
                 {/* 존재하지 않는 경로는 홈으로 */}
                 <Route path="*" element={<Navigate to="/home" />} />

@@ -1,15 +1,16 @@
+// src/api/api.js
 import axios from "axios";
 
 // 서버 기본 URL
 const baseURL = "http://localhost:8080";
 
 // axios 인스턴스 생성
-const api = axios.create({
-    baseURL,
-});
+const api = axios.create({ baseURL });
 
-// 토큰 헤더 함수
-const getAuthHeaders = () => {
+// ============================
+// 인증 헤더
+// ============================
+export const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
     return token ? { Authorization: `Bearer ${token}` } : {};
 };
@@ -50,12 +51,12 @@ export const updateSurvey = async (surveyId, surveyData) => {
         });
         return res.data;
     } catch (err) {
-        console.error(err);
+        console.error("설문 수정 오류:", err);
         return { success: false, message: err.message };
     }
 };
 
-// 설문 상세 조회
+// 설문 상세 조회 (ID로)
 export const getSurveyById = async (surveyId) => {
     try {
         const res = await api.get(`/api/surveys/${surveyId}`, {
@@ -63,7 +64,7 @@ export const getSurveyById = async (surveyId) => {
         });
         return res.data; // { success, survey, pages }
     } catch (err) {
-        console.error(err);
+        console.error("설문 조회 오류:", err);
         return { success: false, message: err.message };
     }
 };
@@ -71,17 +72,20 @@ export const getSurveyById = async (surveyId) => {
 // 내 설문 리스트 조회
 export const getMySurveys = async () => {
     try {
-        const token = localStorage.getItem("token");
         const res = await api.get("/api/surveys", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: getAuthHeaders(),
         });
         return res.data; // { success, surveys: [] }
     } catch (err) {
-        console.error(err);
+        console.error("내 설문 조회 오류:", err);
         return { success: false, surveys: [], message: err.message };
     }
 };
-// 페이지 추가
+
+// ============================
+// 페이지 관련 API
+// ============================
+
 // 페이지 생성
 export const createPage = async (surveyId, pageData) => {
     try {
@@ -101,14 +105,14 @@ export const getPages = async (surveyId) => {
         const res = await api.get(`/api/surveys/${surveyId}/pages`, {
             headers: getAuthHeaders(),
         });
-        return res.data; // { success, pages: [] }
+        return res.data;
     } catch (err) {
         console.error("페이지 조회 오류:", err);
         return { success: false, pages: [], message: err.message };
     }
 };
 
-// 페이지 수정 (PUT)
+// 페이지 수정
 export const updatePage = async (pageId, pageData) => {
     try {
         const res = await api.put(`/api/pages/${pageId}`, pageData, {
@@ -121,7 +125,7 @@ export const updatePage = async (pageId, pageData) => {
     }
 };
 
-// 페이지 삭제 (DELETE)
+// 페이지 삭제
 export const deletePage = async (pageId) => {
     try {
         const res = await api.delete(`/api/pages/${pageId}`, {
@@ -134,7 +138,7 @@ export const deletePage = async (pageId) => {
     }
 };
 
-// 페이지 순서 변경 (PATCH)
+// 페이지 순서 변경
 export const reorderPages = async (surveyId, orderedPageIds) => {
     try {
         const res = await api.patch(
@@ -146,6 +150,112 @@ export const reorderPages = async (surveyId, orderedPageIds) => {
     } catch (err) {
         console.error("페이지 순서 변경 오류:", err);
         return { success: false };
+    }
+};
+
+// ============================
+// 질문 관련 API
+// ============================
+
+// 질문 생성
+export const createQuestion = async (questionData) => {
+    try {
+        const res = await api.post(`/api/questions`, questionData, {
+            headers: getAuthHeaders(),
+        });
+        return res.data;
+    } catch (err) {
+        console.error("질문 생성 오류:", err);
+        return { success: false, message: err.message };
+    }
+};
+
+// 질문 수정
+export const updateQuestionAPI = async (questionId, questionData) => {
+    try {
+        const res = await api.put(
+            `/api/questions/${questionId}`,
+            questionData,
+            {
+                headers: getAuthHeaders(),
+            }
+        );
+        return res.data;
+    } catch (err) {
+        console.error("질문 수정 오류:", err);
+        return { success: false, message: err.message };
+    }
+};
+
+// 질문 삭제
+export const deleteQuestionAPI = async (questionId) => {
+    try {
+        const res = await api.delete(`/api/questions/${questionId}`, {
+            headers: getAuthHeaders(),
+        });
+        return res.data;
+    } catch (err) {
+        console.error("질문 삭제 오류:", err);
+        return { success: false };
+    }
+};
+
+// ============================
+// 설문 응답 관련 API
+// ============================
+
+// 설문 응답 제출
+export const submitSurveyResponse = async (surveyId, answers = []) => {
+    try {
+        const res = await api.post(`/api/surveys/${surveyId}/responses`, {
+            answers,
+        });
+        return res.data;
+    } catch (err) {
+        console.error("응답 제출 오류:", err);
+        return {
+            success: false,
+            message: "응답 제출 실패",
+            error: err.message,
+        };
+    }
+};
+
+// ============================
+// 설문 공유 API
+// ============================
+
+// 공유 링크 생성 / 이메일 공유
+export const createShare = async (surveyId, emails = []) => {
+    try {
+        const res = await api.post(
+            `/api/surveys/${surveyId}/share`,
+            { emails },
+            { headers: getAuthHeaders() }
+        );
+        return res.data;
+    } catch (err) {
+        console.error(
+            "공유 링크 생성 오류:",
+            err.response?.data || err.message
+        );
+        return {
+            success: false,
+            message: err.response?.data?.message || err.message,
+        };
+    }
+};
+
+// 공유 링크로 설문 조회
+export const getSurveyByShareLink = async (shareLink) => {
+    try {
+        const res = await api.get(`/api/surveys/share/${shareLink}`, {
+            headers: getAuthHeaders(),
+        });
+        return res.data;
+    } catch (err) {
+        console.error("공유 설문 조회 오류:", err);
+        return { success: false, message: err.message };
     }
 };
 

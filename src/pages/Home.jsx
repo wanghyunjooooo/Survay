@@ -1,24 +1,25 @@
+// src/pages/Home.jsx
 import React, { useState, useEffect } from "react";
 import { PlusCircle, Share2, BarChart2 } from "lucide-react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/Home.css";
 import NavBar from "../components/Navbar.jsx";
+import ShareModal from "../components/ShareModal.jsx";
 import { useNavigate } from "react-router-dom";
-import { getMySurveys } from "../api/api.js"; // API import
+import { getMySurveys, createShare } from "../api/api.js";
 
 function Home() {
     const [activeTab, setActiveTab] = useState("my");
     const [mySurveys, setMySurveys] = useState([]);
-    const [joinedSurveys, setJoinedSurveys] = useState([]); // 필요하면 API 연결
+    const [joinedSurveys, setJoinedSurveys] = useState([]);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [selectedSurveyId, setSelectedSurveyId] = useState(null);
     const navigate = useNavigate();
 
-    // ===========================
     // 내 설문 리스트 불러오기
-    // ===========================
     const fetchMySurveys = async () => {
         const res = await getMySurveys();
         if (res.success) {
-            // API에서 survey_id로 매핑
             const surveys = res.surveys.map((s) => ({
                 id: s.survey_id,
                 title: s.title,
@@ -36,10 +37,35 @@ function Home() {
         fetchMySurveys();
     }, []);
 
+    // 설문 수정 / 결과 확인
     const handleSurveyClick = (surveyId) => {
         navigate(`/edit-survey/${surveyId}`);
     };
 
+    // 공유 모달 열기
+    const openShareModal = (surveyId) => {
+        setSelectedSurveyId(surveyId);
+        setShowShareModal(true);
+    };
+    const handleShare = async (emails = []) => {
+        if (!selectedSurveyId) return null;
+
+        const res = await createShare(selectedSurveyId, emails);
+        console.log("createShare 응답:", res);
+
+        if (res.success) {
+            const link = `${window.location.origin}/survey/${res.shareLink}`;
+            navigator.clipboard.writeText(link);
+            alert(`공유 링크 생성 완료!\n클립보드에 복사됨:\n${link}`);
+            setShowShareModal(false);
+            return link;
+        } else {
+            alert("공유 실패: " + res.message);
+            return null;
+        }
+    };
+
+    // 설문 리스트 렌더링
     const renderSurveyListItem = (survey) => (
         <li
             key={survey.id}
@@ -76,7 +102,10 @@ function Home() {
                 </button>
                 <button
                     className="btn btn-outline-secondary btn-sm"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        openShareModal(survey.id);
+                    }}
                 >
                     <Share2 size={16} className="me-1" />
                     공유
@@ -119,6 +148,15 @@ function Home() {
                     </ul>
                 </section>
             </div>
+
+            {/* 공유 모달 */}
+            {showShareModal && (
+                <ShareModal
+                    show={showShareModal}
+                    handleClose={() => setShowShareModal(false)}
+                    onShare={handleShare}
+                />
+            )}
         </>
     );
 }
