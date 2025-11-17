@@ -207,9 +207,11 @@ export const deleteQuestionAPI = async (questionId) => {
 // 설문 응답 제출
 export const submitSurveyResponse = async (surveyId, answers = []) => {
     try {
-        const res = await api.post(`/api/surveys/${surveyId}/responses`, {
-            answers,
-        });
+        const res = await api.post(
+            `/api/surveys/${surveyId}/responses`,
+            { answers },
+            { headers: getAuthHeaders() } // ← 여기 추가
+        );
         return res.data;
     } catch (err) {
         console.error("응답 제출 오류:", err);
