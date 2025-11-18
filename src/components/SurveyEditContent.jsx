@@ -10,6 +10,7 @@ import {
     createSurvey,
     updateSurvey,
     getPages,
+    createPage,
 } from "../api/api";
 
 const SurveyEditorWithAPI = forwardRef(
@@ -18,6 +19,7 @@ const SurveyEditorWithAPI = forwardRef(
         const [description, setDescription] = useState("");
         const [pages, setPages] = useState([]);
         const [loading, setLoading] = useState(true);
+        const [currentSurveyId, setCurrentSurveyId] = useState(surveyId);
 
         // =====================
         // 초기 설문/페이지 로드
@@ -122,13 +124,30 @@ const SurveyEditorWithAPI = forwardRef(
                         type: surveyType,
                     };
                     let res;
-                    if (surveyId === "new") res = await createSurvey(payload);
-                    else res = await updateSurvey(surveyId, payload);
-                    if (res?.success) alert("설문 저장 완료!");
-                    else
-                        alert(
-                            "저장 실패: " + (res?.message || "알 수 없는 오류")
-                        );
+                    if (currentSurveyId === "new") {
+                        // 새 설문 생성
+                        res = await createSurvey(payload);
+                        if (res?.success) {
+                            const newId =
+                                res.survey?.survey_id || res.survey?.id;
+                            if (!newId) {
+                                console.error(
+                                    "설문 생성 응답에 ID가 없습니다:",
+                                    res
+                                );
+                                alert("설문 생성 실패: 서버 응답 확인 필요");
+                                return;
+                            }
+                            setCurrentSurveyId(newId);
+                            alert("설문 저장 완료!");
+                        } else {
+                            alert("저장 실패: " + (res?.message || ""));
+                        }
+                    } else {
+                        res = await updateSurvey(currentSurveyId, payload);
+                        if (res?.success) alert("설문 저장 완료!");
+                        else alert("저장 실패: " + (res?.message || ""));
+                    }
                 } catch (err) {
                     console.error(err);
                     alert("서버 오류");
@@ -139,22 +158,38 @@ const SurveyEditorWithAPI = forwardRef(
         // =====================
         // 페이지/질문/옵션 상태 업데이트
         // =====================
-        const addPage = () => {
-            setPages([
-                ...pages,
-                {
-                    id: Date.now(),
-                    title: `페이지 ${pages.length + 1}`,
-                    description: "",
-                    questions: [
-                        {
-                            id: Date.now() + 1,
-                            text: "",
-                            options: surveyType === "short" ? [] : [""],
-                        },
-                    ],
-                },
-            ]);
+        const addPage = async () => {
+            const newPageLocal = {
+                id: Date.now(),
+                title: `페이지 ${pages.length + 1}`,
+                description: "",
+                questions: [
+                    {
+                        id: Date.now() + 1,
+                        text: "",
+                        options: surveyType === "short" ? [] : [""],
+                    },
+                ],
+            };
+
+            setPages([...pages, newPageLocal]);
+
+            // 서버에 이미 존재하는 설문만 페이지 API 호출
+            if (currentSurveyId !== "new") {
+                try {
+                    const res = await createPage(currentSurveyId, {
+                        title: newPageLocal.title,
+                        description: newPageLocal.description,
+                    });
+                    if (res?.success && res.page) {
+                        console.log("페이지 생성 완료:", res.page);
+                    } else {
+                        console.warn("페이지 생성 실패:", res?.message || "");
+                    }
+                } catch (err) {
+                    console.error("페이지 생성 오류:", err);
+                }
+            }
         };
 
         const addQuestion = (pageId) => {
@@ -249,9 +284,6 @@ const SurveyEditorWithAPI = forwardRef(
 
         if (loading) return <div>로딩 중...</div>;
 
-        // =====================
-        // 렌더링
-        // =====================
         return (
             <div>
                 <Form.Group className="mb-3">
@@ -347,7 +379,7 @@ const SurveyEditorWithAPI = forwardRef(
                                 size="sm"
                                 onClick={() => addQuestion(page.id)}
                             >
-                                + 질문 추가
+                                질문 추가
                             </Button>
                         </Card.Body>
                     </Card>
