@@ -6,8 +6,9 @@ import { CheckCircle, LayoutList, FileText, ArrowLeft } from "lucide-react";
 function NewSurveyTypeSelect() {
     const navigate = useNavigate();
 
+    // 🔥 클릭한 유형을 가지고 edit-survey로 이동
     const handleSelect = (type) => {
-        navigate(`/create-survey/${type}`);
+        navigate(`/edit-survey?type=${type}`);
     };
 
     const surveyTypes = [
@@ -36,7 +37,6 @@ function NewSurveyTypeSelect() {
 
     return (
         <div className="vh-100 d-flex flex-column">
-            {/* 간단한 NavBar */}
             <nav className="navbar shadow-sm bg-white px-4">
                 <div className="container-fluid d-flex align-items-center">
                     <button
@@ -52,7 +52,6 @@ function NewSurveyTypeSelect() {
                 </div>
             </nav>
 
-            {/* 설문 유형 선택 화면 */}
             <div className="d-flex justify-content-center align-items-center flex-grow-1">
                 <div className="text-center">
                     <div className="d-flex flex-column flex-md-row gap-4 justify-content-center">
@@ -66,7 +65,7 @@ function NewSurveyTypeSelect() {
                                     transition:
                                         "transform 0.2s, box-shadow 0.2s",
                                 }}
-                                onClick={() => handleSelect(survey.type)}
+                                onClick={() => handleSelect(survey.type)} // 🔥 여기 수정
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.transform =
                                         "translateY(-5px)";

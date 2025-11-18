@@ -12,7 +12,7 @@ import Home from "./pages/Home"; // 메인 홈 페이지
 import EditSurvey from "./pages/EditSurvey"; // 설문 수정 페이지
 import SurveyParticipate from "./pages/SurveyParticipate"; // 설문 참여 페이지
 import NewSurveyTypeSelect from "./pages/NewSurveyTypeSelect"; // 새 설문 유형 선택
-
+import SurveyPreviewPage from "./pages/SurveyPreview";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -34,7 +34,7 @@ function App() {
 
                 {/* 설문 수정 페이지 */}
                 <Route path="/edit-survey/:id" element={<EditSurvey />} />
-
+                <Route path="/edit-survey" element={<EditSurvey />} />
                 {/* 설문 참여 페이지 (공유 링크) */}
                 <Route
                     path="/survey/:shareLink"
@@ -43,6 +43,7 @@ function App() {
 
                 {/* 존재하지 않는 경로는 홈으로 */}
                 <Route path="*" element={<Navigate to="/home" />} />
+                <Route path="/preview/:id" element={<SurveyPreviewPage />} />
             </Routes>
         </Router>
     );
