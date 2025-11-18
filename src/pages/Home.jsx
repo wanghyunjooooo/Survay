@@ -18,21 +18,27 @@ function Home() {
 
     // 내 설문 리스트 불러오기
     const fetchMySurveys = async () => {
-        const res = await getMySurveys();
-        if (res.success) {
-            const surveys = res.surveys.map((s) => ({
-                id: s.survey_id,
-                title: s.title,
-                status:
-                    new Date(s.end_date) > new Date() ? "진행 중" : "종료됨",
-                endDate: s.end_date.slice(0, 10),
-            }));
-            setMySurveys(surveys);
-        } else {
-            alert("설문 리스트 불러오기 실패: " + res.message);
+        try {
+            const res = await getMySurveys();
+            if (res.success) {
+                const surveys = res.surveys.map((s) => ({
+                    id: s.survey_id,
+                    title: s.title,
+                    status:
+                        s.end_date && new Date(s.end_date) > new Date()
+                            ? "진행 중"
+                            : "종료됨",
+                    endDate: s.end_date ? s.end_date.slice(0, 10) : "미정",
+                }));
+                setMySurveys(surveys);
+            } else {
+                alert("설문 리스트 불러오기 실패: " + res.message);
+            }
+        } catch (err) {
+            console.error("설문 리스트 조회 오류:", err);
+            alert("설문 리스트 조회 중 오류가 발생했습니다.");
         }
     };
-
     useEffect(() => {
         fetchMySurveys();
     }, []);

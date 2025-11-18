@@ -40,39 +40,60 @@ const SurveyEditorWithAPI = forwardRef(
                     setPages([newPage]);
                     setLoading(false);
                 } else {
-                    const res = await getSurveyById(surveyId);
-                    if (res.success) {
-                        setTitle(res.survey.title);
-                        setDescription(res.survey.description);
-                        const pagesRes = await getPages(surveyId);
-                        if (pagesRes.success) {
-                            const formattedPages = pagesRes.pages.map((p) => ({
-                                ...p,
-                                questions: p.questions?.length
-                                    ? p.questions.map((q) => ({
-                                          ...q,
-                                          options:
-                                              surveyType === "short"
-                                                  ? []
-                                                  : q.options?.length
-                                                  ? q.options
-                                                  : [""],
-                                      }))
-                                    : [
-                                          {
-                                              id: Date.now() + Math.random(),
-                                              text: "",
-                                              options:
-                                                  surveyType === "short"
-                                                      ? []
-                                                      : [""],
-                                          },
-                                      ],
-                            }));
-                            setPages(formattedPages);
+                    try {
+                        const res = await getSurveyById(surveyId);
+                        if (res?.success) {
+                            setTitle(res.survey?.title || "");
+                            setDescription(res.survey?.description || "");
+                            const pagesRes = await getPages(surveyId);
+                            if (pagesRes?.success) {
+                                const formattedPages = (
+                                    pagesRes.pages || []
+                                ).map((p, pageIdx) => ({
+                                    id: p.id || Date.now() + pageIdx,
+                                    title: p.title || `페이지 ${pageIdx + 1}`,
+                                    description: p.description || "",
+                                    questions:
+                                        p.questions?.length > 0
+                                            ? p.questions.map((q, qIdx) => ({
+                                                  id:
+                                                      q.id ||
+                                                      Date.now() +
+                                                          Math.random(),
+                                                  text: q.text || "",
+                                                  options:
+                                                      surveyType === "short"
+                                                          ? []
+                                                          : q.options?.length
+                                                          ? q.options
+                                                          : [""],
+                                              }))
+                                            : [
+                                                  {
+                                                      id:
+                                                          Date.now() +
+                                                          Math.random(),
+                                                      text: "",
+                                                      options:
+                                                          surveyType === "short"
+                                                              ? []
+                                                              : [""],
+                                                  },
+                                              ],
+                                }));
+                                setPages(formattedPages);
+                            } else {
+                                setPages([]);
+                            }
+                        } else {
+                            setPages([]);
                         }
+                    } catch (err) {
+                        console.error(err);
+                        setPages([]);
+                    } finally {
+                        setLoading(false);
                     }
-                    setLoading(false);
                 }
             };
             fetchSurvey();
@@ -103,8 +124,11 @@ const SurveyEditorWithAPI = forwardRef(
                     let res;
                     if (surveyId === "new") res = await createSurvey(payload);
                     else res = await updateSurvey(surveyId, payload);
-                    if (res.success) alert("설문 저장 완료!");
-                    else alert("저장 실패: " + res.message);
+                    if (res?.success) alert("설문 저장 완료!");
+                    else
+                        alert(
+                            "저장 실패: " + (res?.message || "알 수 없는 오류")
+                        );
                 } catch (err) {
                     console.error(err);
                     alert("서버 오류");
@@ -132,6 +156,7 @@ const SurveyEditorWithAPI = forwardRef(
                 },
             ]);
         };
+
         const addQuestion = (pageId) => {
             setPages(
                 pages.map((p) =>
@@ -139,7 +164,7 @@ const SurveyEditorWithAPI = forwardRef(
                         ? {
                               ...p,
                               questions: [
-                                  ...p.questions,
+                                  ...(p.questions || []),
                                   {
                                       id: Date.now(),
                                       text: "",
@@ -152,6 +177,7 @@ const SurveyEditorWithAPI = forwardRef(
                 )
             );
         };
+
         const addOption = (pageId, questionId) => {
             if (surveyType === "short") return;
             setPages(
@@ -159,9 +185,12 @@ const SurveyEditorWithAPI = forwardRef(
                     p.id === pageId
                         ? {
                               ...p,
-                              questions: p.questions.map((q) =>
+                              questions: (p.questions || []).map((q) =>
                                   q.id === questionId
-                                      ? { ...q, options: [...q.options, ""] }
+                                      ? {
+                                            ...q,
+                                            options: [...(q.options || []), ""],
+                                        }
                                       : q
                               ),
                           }
@@ -169,13 +198,14 @@ const SurveyEditorWithAPI = forwardRef(
                 )
             );
         };
+
         const updateQuestionText = (pageId, questionId, value) => {
             setPages(
                 pages.map((p) =>
                     p.id === pageId
                         ? {
                               ...p,
-                              questions: p.questions.map((q) =>
+                              questions: (p.questions || []).map((q) =>
                                   q.id === questionId
                                       ? { ...q, text: value }
                                       : q
@@ -185,18 +215,20 @@ const SurveyEditorWithAPI = forwardRef(
                 )
             );
         };
+
         const updateOptionText = (pageId, questionId, idx, value) => {
             setPages(
                 pages.map((p) =>
                     p.id === pageId
                         ? {
                               ...p,
-                              questions: p.questions.map((q) =>
+                              questions: (p.questions || []).map((q) =>
                                   q.id === questionId
                                       ? {
                                             ...q,
-                                            options: q.options.map((o, i) =>
-                                                i === idx ? value : o
+                                            options: (q.options || []).map(
+                                                (o, i) =>
+                                                    i === idx ? value : o
                                             ),
                                         }
                                       : q
@@ -206,6 +238,7 @@ const SurveyEditorWithAPI = forwardRef(
                 )
             );
         };
+
         const updatePageDescription = (pageId, value) => {
             setPages(
                 pages.map((p) =>
@@ -224,7 +257,7 @@ const SurveyEditorWithAPI = forwardRef(
                 <Form.Group className="mb-3">
                     <Form.Control
                         placeholder="설문 제목"
-                        value={title}
+                        value={title || ""}
                         onChange={(e) => setTitle(e.target.value)}
                     />
                 </Form.Group>
@@ -233,21 +266,23 @@ const SurveyEditorWithAPI = forwardRef(
                         as="textarea"
                         rows={2}
                         placeholder="설문 설명"
-                        value={description}
+                        value={description || ""}
                         onChange={(e) => setDescription(e.target.value)}
                     />
                 </Form.Group>
 
-                {pages.map((page) => (
-                    <Card key={page.id} className="mb-3">
+                {(pages || []).map((page, pageIdx) => (
+                    <Card key={page.id || pageIdx} className="mb-3">
                         <Card.Body>
-                            <Card.Title>{page.title}</Card.Title>
+                            <Card.Title>
+                                {page.title || `페이지 ${pageIdx + 1}`}
+                            </Card.Title>
                             <Form.Group className="mb-2">
                                 <Form.Control
                                     as="textarea"
                                     rows={2}
                                     placeholder="페이지 설명"
-                                    value={page.description}
+                                    value={page.description || ""}
                                     onChange={(e) =>
                                         updatePageDescription(
                                             page.id,
@@ -257,11 +292,11 @@ const SurveyEditorWithAPI = forwardRef(
                                 />
                             </Form.Group>
 
-                            {page.questions.map((q, qIdx) => (
-                                <div key={q.id} className="mb-2">
+                            {(page.questions || []).map((q, qIdx) => (
+                                <div key={q.id || qIdx} className="mb-2">
                                     <Form.Control
                                         placeholder={`질문 ${qIdx + 1}`}
-                                        value={q.text}
+                                        value={q.text || ""}
                                         onChange={(e) =>
                                             updateQuestionText(
                                                 page.id,
@@ -272,7 +307,7 @@ const SurveyEditorWithAPI = forwardRef(
                                         className="mb-2"
                                     />
                                     {surveyType !== "short" &&
-                                        q.options.map((opt, idx) => (
+                                        (q.options || []).map((opt, idx) => (
                                             <InputGroup
                                                 className="mb-2"
                                                 key={idx}
@@ -281,7 +316,7 @@ const SurveyEditorWithAPI = forwardRef(
                                                     placeholder={`보기 ${
                                                         idx + 1
                                                     }`}
-                                                    value={opt}
+                                                    value={opt || ""}
                                                     onChange={(e) =>
                                                         updateOptionText(
                                                             page.id,
