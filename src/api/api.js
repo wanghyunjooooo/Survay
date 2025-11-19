@@ -268,7 +268,30 @@ export const submitSurveyResponse = async (surveyId, answers = []) => {
         };
     }
 };
-
+// 설문 응답 조회 (SurveyResultsContent에서 사용)
+export const getSurveyResponses = async (surveyId) => {
+    try {
+        const res = await api.get(`/api/surveys/${surveyId}/responses`, {
+            headers: getAuthHeaders(),
+        });
+        return res.data;
+    } catch (err) {
+        console.error("설문 응답 조회 오류:", err);
+        return { success: false, responses: [], message: err.message };
+    }
+};
+// 설문 참여자별 결과 조회
+export const getSurveyParticipants = async (surveyId) => {
+    try {
+        const res = await api.get(`/api/surveys/${surveyId}/participants`, {
+            headers: getAuthHeaders(),
+        });
+        return res.data; // { success, participants: [] }
+    } catch (err) {
+        console.error("참여자별 결과 조회 오류:", err);
+        return { success: false, participants: [], message: err.message };
+    }
+};
 // ============================
 // 설문 공유 API
 // ============================
@@ -361,5 +384,16 @@ export const deleteOption = async (optionId) => {
         return { success: false, error: err };
     }
 };
-
+// 질문별 통계 조회
+export const getSurveySummary = async (surveyId) => {
+    try {
+        const res = await api.get(`/api/surveys/${surveyId}/summary`, {
+            headers: getAuthHeaders(),
+        });
+        return res.data; // { success, summary: [...] }
+    } catch (err) {
+        console.error("설문 통계 조회 오류:", err);
+        return { success: false, summary: [] };
+    }
+};
 export default api;
