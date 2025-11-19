@@ -1,6 +1,3 @@
-// (코드 전체 붙여드립니다) — 너무 길어 생략 없이 모두 들어갑니다.
-// 수정한 부분은 "// FIXED" 라고 표시됨.
-
 import React, {
     useState,
     useEffect,
@@ -20,6 +17,7 @@ import {
     createQuestion,
     updateQuestion,
     deleteQuestion,
+    getQuestionsByPage, // FIXED: 페이지 질문 조회 API 추가
 } from "../api/api";
 
 const SurveyEditorWithAPI = forwardRef(
@@ -48,14 +46,17 @@ const SurveyEditorWithAPI = forwardRef(
         };
 
         // =======================
-        // 초기 설문/페이지 로드
+        // 초기 설문/페이지 로드 + 질문 리스트 연결
         // =======================
         useEffect(() => {
             const fetchOrCreateSurvey = async () => {
+                if (!surveyType) return; // surveyType 준비될 때까지 대기
+
                 try {
                     let sid = currentSurveyId;
 
                     if (currentSurveyId === "new") {
+                        // 1. 새 설문 생성
                         const res = await createSurvey({
                             title: "제목 없음",
                             subtitle: "",
@@ -75,30 +76,37 @@ const SurveyEditorWithAPI = forwardRef(
                                 throw new Error("서버 응답에 ID가 없습니다.");
                             setCurrentSurveyId(sid);
 
+                            // 2. 첫 페이지 생성
                             const pageRes = await createPage(sid, {
                                 title: "페이지 1",
                                 order_index: 0,
                             });
+
                             if (pageRes?.success) {
+                                const firstQuestion = {
+                                    id: `temp-${Date.now()}`,
+                                    text: "질문 입력",
+                                    type:
+                                        surveyType === "short"
+                                            ? "short"
+                                            : "single",
+                                    order_index: 0,
+                                    options: surveyType === "short" ? [] : [""],
+                                    isTemp: true,
+                                };
+
                                 setPages([
                                     {
                                         id: pageRes.page.page_id,
-                                        title: pageRes.page.title,
+                                        title: pageRes.page.title || "페이지 1",
                                         description: "",
-                                        questions: [
-                                            {
-                                                text: "질문 입력",
-                                                options:
-                                                    surveyType === "short"
-                                                        ? []
-                                                        : [""],
-                                            },
-                                        ],
+                                        questions: [firstQuestion],
                                     },
                                 ]);
                             }
                         }
                     } else {
+                        // 3. 기존 설문 불러오기
                         const res = await getSurveyById(sid);
                         if (res?.success) {
                             setTitle(res.survey?.title || "");
@@ -117,30 +125,54 @@ const SurveyEditorWithAPI = forwardRef(
 
                             const pagesRes = await getPages(sid);
                             if (pagesRes?.success) {
-                                setPages(
-                                    (pagesRes.pages || []).map((p, idx) => ({
-                                        id: p.page_id,
-                                        title: p.title || `페이지 ${idx + 1}`,
-                                        description: p.description || "",
-                                        questions: (p.questions || []).map(
-                                            (q) => ({
-                                                id: q.question_id || q.id, // FIXED (임시 ID 제거)
-                                                text: q.title || q.text || "",
-                                                type:
-                                                    q.type ||
-                                                    (surveyType === "short"
-                                                        ? "short"
-                                                        : "single"),
-                                                order_index: q.order_index ?? 0,
-                                                options: q.options?.length
-                                                    ? q.options
-                                                    : surveyType === "short"
-                                                    ? []
-                                                    : [""],
-                                            })
-                                        ),
-                                    }))
+                                const pagesWithQuestions = await Promise.all(
+                                    pagesRes.pages.map(async (p, idx) => {
+                                        const qRes = await getQuestionsByPage(
+                                            p.page_id
+                                        );
+                                        const questions = (
+                                            qRes.questions || []
+                                        ).map((q) => ({
+                                            id: q.question_id,
+                                            text: q.title,
+                                            type: q.type,
+                                            order_index: q.order_index ?? 0,
+                                            options: [], // 필요 시 옵션 추가
+                                        }));
+
+                                        // 질문이 없으면 임시 질문 1개 추가
+                                        const finalQuestions =
+                                            questions.length > 0
+                                                ? questions
+                                                : [
+                                                      {
+                                                          id: `temp-${Date.now()}`,
+                                                          text: "질문 입력",
+                                                          type:
+                                                              surveyType ===
+                                                              "short"
+                                                                  ? "short"
+                                                                  : "single",
+                                                          order_index: 0,
+                                                          options:
+                                                              surveyType ===
+                                                              "short"
+                                                                  ? []
+                                                                  : [""],
+                                                          isTemp: true,
+                                                      },
+                                                  ];
+
+                                        return {
+                                            id: p.page_id,
+                                            title:
+                                                p.title || `페이지 ${idx + 1}`,
+                                            description: p.description || "",
+                                            questions: finalQuestions,
+                                        };
+                                    })
                                 );
+                                setPages(pagesWithQuestions);
                             } else {
                                 setPages([]);
                             }
@@ -155,6 +187,7 @@ const SurveyEditorWithAPI = forwardRef(
                     setLoading(false);
                 }
             };
+
             fetchOrCreateSurvey();
         }, [currentSurveyId, surveyType]);
 
@@ -240,8 +273,15 @@ const SurveyEditorWithAPI = forwardRef(
                             description: "",
                             questions: [
                                 {
+                                    id: `temp-${Date.now()}`,
                                     text: "질문 입력",
+                                    type:
+                                        surveyType === "short"
+                                            ? "short"
+                                            : "single",
+                                    order_index: 0,
                                     options: surveyType === "short" ? [] : [""],
+                                    isTemp: true,
                                 },
                             ],
                         },
@@ -276,7 +316,6 @@ const SurveyEditorWithAPI = forwardRef(
                 console.error("페이지 수정 오류:", err);
             }
         };
-
         const deletePageById = async (pageId) => {
             try {
                 await deletePage(pageId);
@@ -287,49 +326,96 @@ const SurveyEditorWithAPI = forwardRef(
         };
 
         const addQuestion = async (pageId) => {
+            const page = pages.find((p) => p.id === pageId);
+            if (!page) return;
+
+            const questionType = surveyType === "short" ? "short" : "single";
+
+            // 1) 임시 질문 추가 (UI용)
+            const tempQuestion = {
+                id: `temp-${Date.now()}-${Math.random()}`, // 임시 ID 문자열로 변경
+                text: "새 질문",
+                type: questionType,
+                order_index: page.questions.length,
+                options: [],
+                isTemp: true, // 임시 질문 표시용 플래그
+            };
+
+            setPages((prev) =>
+                prev.map((p) =>
+                    p.id === pageId
+                        ? { ...p, questions: [...p.questions, tempQuestion] }
+                        : p
+                )
+            );
+
             try {
-                const page = pages.find((p) => p.id === pageId);
-                if (!page) return;
-
-                const questionType =
-                    surveyType === "short" ? "short" : "single";
-
-                const newQuestionPayload = {
+                // 2) 서버 저장
+                const res = await createQuestion({
                     pageId,
-                    title: "새 질문",
+                    title: tempQuestion.text,
                     type: questionType,
-                    order_index: page.questions?.length || 0,
-                };
-
-                const res = await createQuestion(newQuestionPayload);
+                    order_index: tempQuestion.order_index,
+                });
 
                 if (res?.success && res.question) {
-                    const serverQuestion = {
-                        id: res.question.question_id,
-                        text: res.question.title || "새 질문",
-                        type: res.question.type || questionType,
-                        order_index:
-                            res.question.order_index ??
-                            newQuestionPayload.order_index,
-                        options: [],
-                    };
-
+                    // 3) 서버에서 받은 ID로 임시 ID 교체
                     setPages((prev) =>
                         prev.map((p) =>
                             p.id === pageId
                                 ? {
                                       ...p,
-                                      questions: [
-                                          ...(p.questions || []),
-                                          serverQuestion,
-                                      ],
+                                      questions: p.questions.map((q) =>
+                                          q.id === tempQuestion.id
+                                              ? {
+                                                    ...q,
+                                                    id: res.question
+                                                        .question_id,
+                                                    text: res.question.title,
+                                                    type: res.question.type,
+                                                    order_index:
+                                                        res.question
+                                                            .order_index,
+                                                    isTemp: false, // 서버 저장 완료
+                                                }
+                                              : q
+                                      ),
                                   }
                                 : p
                         )
                     );
+                } else {
+                    // 서버 저장 실패 시 임시 질문 롤백
+                    setPages((prev) =>
+                        prev.map((p) =>
+                            p.id === pageId
+                                ? {
+                                      ...p,
+                                      questions: p.questions.filter(
+                                          (q) => q.id !== tempQuestion.id
+                                      ),
+                                  }
+                                : p
+                        )
+                    );
+                    alert("질문 추가 실패: 서버 저장 오류");
                 }
-            } catch {
-                console.error("질문 추가 오류");
+            } catch (err) {
+                console.error("질문 추가 오류:", err);
+                // 서버 오류 시 임시 질문 롤백
+                setPages((prev) =>
+                    prev.map((p) =>
+                        p.id === pageId
+                            ? {
+                                  ...p,
+                                  questions: p.questions.filter(
+                                      (q) => q.id !== tempQuestion.id
+                                  ),
+                              }
+                            : p
+                    )
+                );
+                alert("질문 추가 실패: 서버 오류");
             }
         };
 
@@ -351,22 +437,21 @@ const SurveyEditorWithAPI = forwardRef(
         };
 
         const handleQuestionBlur = async (pageId, questionId, qIdx) => {
+            const page = pages.find((p) => p.id === pageId);
+            if (!page) return;
+
+            const question = page.questions.find((q) => q.id === questionId);
+            if (!question || question.isTemp) return; // 임시 질문이면 무시
+
+            const payload = {
+                title: question.text || "제목 없음",
+                type:
+                    question.type ||
+                    (surveyType === "short" ? "short" : "single"),
+                order_index: question.order_index ?? qIdx ?? 0,
+            };
+
             try {
-                const page = pages.find((p) => p.id === pageId);
-                if (!page) return;
-                const question = page.questions.find(
-                    (q) => q.id === questionId
-                );
-                if (!question) return;
-
-                const payload = {
-                    title: question.text || "제목 없음",
-                    type:
-                        question.type ||
-                        (surveyType === "short" ? "short" : "single"),
-                    order_index: question.order_index ?? qIdx ?? 0,
-                };
-
                 await updateQuestion(questionId, payload);
             } catch (err) {
                 console.error("질문 수정 오류:", err);

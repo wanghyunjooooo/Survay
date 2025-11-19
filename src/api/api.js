@@ -227,6 +227,24 @@ export const deleteQuestion = async (questionId) => {
         return { success: false };
     }
 };
+// ================================
+// 페이지 내 질문 리스트 조회
+// ================================
+export const getQuestionsByPage = async (pageId) => {
+    try {
+        const res = await api.get(`/api/questions/${pageId}`, {
+            headers: getAuthHeaders(),
+        });
+        console.log(`[getQuestionsByPage] pageId: ${pageId}`, res.data);
+        return res.data;
+    } catch (err) {
+        console.error(
+            `[getQuestionsByPage] 실패 pageId: ${pageId}`,
+            err.response?.data || err.message
+        );
+        return { success: false, questions: [] };
+    }
+};
 
 // ============================
 // 설문 응답 관련 API
