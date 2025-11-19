@@ -17,7 +17,16 @@ const SurveyPreviewPage = ({
     return (
         <Container className="py-5">
             <div className="d-flex justify-content-end mb-3">
-                <Button variant="secondary" onClick={() => navigate(-1)}>
+                <Button
+                    variant="secondary"
+                    onClick={() =>
+                        navigate(
+                            `/edit-survey/${
+                                surveyData?.id || surveyData?.survey_id
+                            }`
+                        )
+                    }
+                >
                     미리보기 종료
                 </Button>
             </div>

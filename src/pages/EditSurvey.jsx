@@ -1,11 +1,11 @@
+// src/pages/EditSurvey.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import EditSurveyNavBar from "../components/EditSurveyNavBar";
 import SurveyEditorWithAPI from "../components/SurveyEditContent.jsx";
 import SurveyResultsContent from "../components/SurveyResultsContent";
 import SurveyPreviewResponsive from "../pages/SurveyPreview";
-import SideTabs from "../components/SideTabs"; // 추가
-import { getSurveyById, createSurvey, updateSurvey } from "../api/api.js";
+import { getSurveyById } from "../api/api.js";
 
 function EditSurvey() {
     const { id } = useParams();
@@ -55,25 +55,7 @@ function EditSurvey() {
 
     const handleSave = async () => {
         if (!surveyRef.current) return;
-
-        const payload = surveyRef.current.getSurveyData();
-        payload.type = surveyType;
-
-        try {
-            let res;
-            if (realId === "new") res = await createSurvey(payload);
-            else res = await updateSurvey(realId, payload);
-
-            if (res.success) {
-                alert("설문이 성공적으로 저장되었습니다!");
-                setSurveyData(res.survey);
-            } else {
-                alert("설문 저장 실패: " + res.message);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("서버 에러 발생");
-        }
+        await surveyRef.current.saveSurvey();
     };
 
     const handleSaveDraft = () => alert("임시저장 클릭 - API 연결 필요");
@@ -85,7 +67,6 @@ function EditSurvey() {
     if (previewMode) {
         return (
             <div className="container py-4">
-                <div className="d-flex justify-content-between align-items-center mb-3"></div>
                 <SurveyPreviewResponsive
                     surveyData={surveyData}
                     surveyType={surveyType}
@@ -144,25 +125,19 @@ function EditSurvey() {
                 </button>
             </div>
 
-            {/* 2단 레이아웃: 좌측 편집 / 우측 사이드 탭 */}
             <div
                 className="container py-4"
                 style={{ display: "flex", gap: "2rem" }}
             >
                 {activeTab === "edit" ? (
-                    <>
-                        <div style={{ flex: 3, marginTop: "90px" }}>
-                            <SurveyEditorWithAPI
-                                ref={surveyRef}
-                                surveyId={realId}
-                                surveyType={surveyType}
-                                onChange={(data) => setSurveyData(data)} // data = { title, description, pages }
-                            />
-                        </div>
-                        <div style={{ flex: 1, marginTop: "50px" }}>
-                            <SideTabs pages={surveyData?.pages || []} />
-                        </div>
-                    </>
+                    <div style={{ flex: 1, marginTop: "20px" }}>
+                        <SurveyEditorWithAPI
+                            ref={surveyRef}
+                            surveyId={realId}
+                            surveyType={surveyType}
+                            onChange={(data) => setSurveyData(data)}
+                        />
+                    </div>
                 ) : (
                     <SurveyResultsContent surveyId={realId} />
                 )}
