@@ -1,6 +1,6 @@
 // src/pages/EditSurvey.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import EditSurveyNavBar from "../components/EditSurveyNavBar";
 import SurveyEditorWithAPI from "../components/SurveyEditContent.jsx";
 import SurveyResultsContent from "../components/SurveyResultsContent";
@@ -10,9 +10,9 @@ import { getSurveyById } from "../api/api.js";
 function EditSurvey() {
     const { id } = useParams();
     const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
-
     const realId = id ?? "new";
+
+    // query에서 surveyType 받아오기
     const typeFromQuery = searchParams.get("type");
 
     const [activeTab, setActiveTab] = useState("edit");
@@ -25,26 +25,32 @@ function EditSurvey() {
 
     const surveyRef = useRef();
 
+    // 설문 불러오기
     useEffect(() => {
         const fetchSurvey = async () => {
             if (realId === "new") {
                 setSurveyData(null);
-                setSurveyType(typeFromQuery);
+                setSurveyType(typeFromQuery || "single"); // 새 설문이면 query값 또는 기본 single
                 setLoading(false);
                 return;
             }
 
             try {
                 const res = await getSurveyById(realId);
-                if (res.success) {
+                if (res.success && res.survey) {
                     setSurveyData(res.survey);
-                    setSurveyType(res.survey.type);
+                    setSurveyType(typeFromQuery || res.survey.type || "single"); // query 우선
                 } else {
-                    alert("설문 불러오기 실패: " + res.message);
+                    alert(
+                        "설문 불러오기 실패: " +
+                            (res.message || "알 수 없는 오류")
+                    );
+                    setSurveyData(null);
                 }
             } catch (err) {
-                console.error(err);
-                alert("서버 오류 발생");
+                console.error("설문 상세 조회 오류:", err);
+                alert("서버 오류로 설문을 불러올 수 없습니다.");
+                setSurveyData(null);
             } finally {
                 setLoading(false);
             }
@@ -53,16 +59,22 @@ function EditSurvey() {
         fetchSurvey();
     }, [realId, typeFromQuery]);
 
+    // 저장
     const handleSave = async () => {
         if (!surveyRef.current) return;
         await surveyRef.current.saveSurvey();
     };
 
     const handleSaveDraft = () => alert("임시저장 클릭 - API 연결 필요");
-
     const handlePreview = () => setPreviewMode(true);
 
     if (loading) return <div className="container py-5">로딩 중...</div>;
+    if (!surveyData && realId !== "new")
+        return (
+            <div className="container py-5">
+                설문 정보를 불러올 수 없습니다.
+            </div>
+        );
 
     if (previewMode) {
         return (
@@ -135,6 +147,7 @@ function EditSurvey() {
                             ref={surveyRef}
                             surveyId={realId}
                             surveyType={surveyType}
+                            surveyData={surveyData}
                             onChange={(data) => setSurveyData(data)}
                         />
                     </div>

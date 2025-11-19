@@ -1,17 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/SurveyResultsContent.css";
+import { getSurveyById, getSurveyResponses } from "../api/api.js"; // API 함수 import
 
 function SurveyResultsContent({ surveyId }) {
     const [activeTab, setActiveTab] = useState("종합 결과");
+    const [surveyInfo, setSurveyInfo] = useState(null);
+    const [responses, setResponses] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // 예시 데이터
-    const surveyInfo = {
-        title: "밥",
-        status: "진행 중",
-        startDate: "2025. 11. 10. 오후 02:18",
-        endDate: "제한 없음",
-        totalParticipants: 123,
-    };
+    useEffect(() => {
+        const fetchSurveyData = async () => {
+            try {
+                // 1️⃣ 설문 기본 정보 조회
+                const surveyRes = await getSurveyById(surveyId);
+                if (surveyRes.success && surveyRes.survey) {
+                    const s = surveyRes.survey;
+                    setSurveyInfo({
+                        title: s.title,
+                        status:
+                            s.end_date && new Date(s.end_date) > new Date()
+                                ? "진행 중"
+                                : "종료됨",
+                        startDate: s.start_date
+                            ? new Date(s.start_date).toLocaleString()
+                            : "미정",
+                        endDate: s.end_date
+                            ? new Date(s.end_date).toLocaleString()
+                            : "제한 없음",
+                        totalParticipants: 0, // 초기값, 아래 응답 조회 후 업데이트
+                    });
+                } else {
+                    alert("설문 정보를 불러올 수 없습니다.");
+                }
+
+                // 2️⃣ 설문 응답 조회
+                const responsesRes = await getSurveyResponses(surveyId);
+                if (responsesRes.success && responsesRes.responses) {
+                    setResponses(responsesRes.responses);
+                    setSurveyInfo((prev) => ({
+                        ...prev,
+                        totalParticipants: responsesRes.responses.length,
+                    }));
+                }
+            } catch (err) {
+                console.error("설문 결과 조회 오류:", err);
+                alert("설문 결과를 불러오는 중 오류가 발생했습니다.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSurveyData();
+    }, [surveyId]);
+
+    if (loading) return <div className="results-container">로딩 중...</div>;
+    if (!surveyInfo)
+        return <div className="results-container">설문 정보 없음</div>;
 
     return (
         <div className="results-container">
@@ -60,7 +104,20 @@ function SurveyResultsContent({ surveyId }) {
                         <h3>참여자별 결과</h3>
                         <p>참여자 개별 응답 목록 또는 표를 보여줍니다.</p>
                         <div className="table-placeholder">
-                            👤 참여자별 데이터 테이블
+                            {responses.length > 0 ? (
+                                <ul>
+                                    {responses.map((r) => (
+                                        <li key={r.response_id}>
+                                            ID: {r.response_id} | 제출일:{" "}
+                                            {new Date(
+                                                r.submitted_at
+                                            ).toLocaleString()}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                "응답이 없습니다."
+                            )}
                         </div>
                     </section>
                 )}

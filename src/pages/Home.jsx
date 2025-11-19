@@ -20,10 +20,12 @@ function Home() {
     const fetchMySurveys = async () => {
         try {
             const res = await getMySurveys();
+            console.log("getMySurveys:", res);
             if (res.success) {
                 const surveys = res.surveys.map((s) => ({
                     id: s.survey_id,
                     title: s.title,
+                    type: s.type || "single", // <- surveyType 추가
                     status:
                         s.end_date && new Date(s.end_date) > new Date()
                             ? "진행 중"
@@ -39,13 +41,16 @@ function Home() {
             alert("설문 리스트 조회 중 오류가 발생했습니다.");
         }
     };
+
     useEffect(() => {
         fetchMySurveys();
     }, []);
 
-    // 설문 수정 / 결과 확인
-    const handleSurveyClick = (surveyId) => {
-        navigate(`/edit-survey/${surveyId}`);
+    // 설문 클릭 시 EditSurvey로 이동
+    const handleSurveyClick = (surveyId, surveyType = "single") => {
+        console.log("설문 클릭:", surveyId, surveyType);
+        // 쿼리로 surveyType 전달
+        navigate(`/edit-survey/${surveyId}?type=${surveyType}`);
     };
 
     // 공유 모달 열기
@@ -53,20 +58,27 @@ function Home() {
         setSelectedSurveyId(surveyId);
         setShowShareModal(true);
     };
+
     const handleShare = async (emails = []) => {
         if (!selectedSurveyId) return null;
 
-        const res = await createShare(selectedSurveyId, emails);
-        console.log("createShare 응답:", res);
+        try {
+            const res = await createShare(selectedSurveyId, emails);
+            console.log("createShare 응답:", res);
 
-        if (res.success) {
-            const link = `${window.location.origin}/survey/${res.shareLink}`;
-            navigator.clipboard.writeText(link);
-            alert(`공유 링크 생성 완료!\n클립보드에 복사됨:\n${link}`);
-            setShowShareModal(false);
-            return link;
-        } else {
-            alert("공유 실패: " + res.message);
+            if (res.success) {
+                const link = `${window.location.origin}/survey/${res.shareLink}`;
+                navigator.clipboard.writeText(link);
+                alert(`공유 링크 생성 완료!\n클립보드에 복사됨:\n${link}`);
+                setShowShareModal(false);
+                return link;
+            } else {
+                alert("공유 실패: " + res.message);
+                return null;
+            }
+        } catch (err) {
+            console.error("공유 오류:", err);
+            alert("공유 중 오류가 발생했습니다.");
             return null;
         }
     };
@@ -76,6 +88,7 @@ function Home() {
         if (!window.confirm("정말 이 설문을 삭제하시겠습니까?")) return;
         try {
             const res = await deleteSurvey(surveyId);
+            console.log("deleteSurvey 응답:", res);
             if (res.success) {
                 alert("설문이 삭제되었습니다.");
                 fetchMySurveys(); // 삭제 후 리스트 새로 불러오기
@@ -83,7 +96,7 @@ function Home() {
                 alert("삭제 실패: " + res.message);
             }
         } catch (err) {
-            console.error(err);
+            console.error("삭제 오류:", err);
             alert("서버 오류로 삭제할 수 없습니다.");
         }
     };
@@ -94,7 +107,7 @@ function Home() {
             key={survey.id}
             className="list-group-item d-flex justify-content-between align-items-center survey-list-item"
             style={{ cursor: "pointer" }}
-            onClick={() => handleSurveyClick(survey.id)}
+            onClick={() => handleSurveyClick(survey.id, survey.type)} // surveyType 전달
         >
             <div>
                 <h6 className="mb-1">{survey.title}</h6>
@@ -117,7 +130,10 @@ function Home() {
                     className="btn btn-outline-primary btn-sm me-2"
                     onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/edit-survey/${survey.id}`);
+                        console.log("결과 확인 클릭:", survey.id);
+                        navigate(
+                            `/edit-survey/${survey.id}?type=${survey.type}`
+                        );
                     }}
                 >
                     <BarChart2 size={16} className="me-1" />
@@ -127,6 +143,7 @@ function Home() {
                     className="btn btn-outline-secondary btn-sm me-2"
                     onClick={(e) => {
                         e.stopPropagation();
+                        console.log("공유 클릭:", survey.id);
                         openShareModal(survey.id);
                     }}
                 >
@@ -137,6 +154,7 @@ function Home() {
                     className="btn btn-outline-danger btn-sm"
                     onClick={(e) => {
                         e.stopPropagation();
+                        console.log("삭제 클릭:", survey.id);
                         handleDeleteSurvey(survey.id);
                     }}
                 >

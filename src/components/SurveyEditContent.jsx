@@ -127,19 +127,36 @@ const SurveyEditorWithAPI = forwardRef(
                                         const qRes = await getQuestionsByPage(
                                             p.page_id
                                         );
+
                                         const questions = (
                                             qRes.questions || []
-                                        ).map((q) => ({
-                                            id: q.question_id,
-                                            text: q.title,
-                                            type: q.type,
-                                            order_index: q.order_index ?? 0,
-                                            options:
-                                                q.options?.map((o) => ({
-                                                    id: o.option_id,
-                                                    text: o.title,
-                                                })) || [],
-                                        }));
+                                        ).map((q) => {
+                                            const options =
+                                                q.options?.map((o) => {
+                                                    // ✅ JSON 파싱 후 title만 사용
+                                                    let parsedText = "";
+                                                    try {
+                                                        parsedText =
+                                                            JSON.parse(o.text)
+                                                                ?.title ||
+                                                            o.text;
+                                                    } catch {
+                                                        parsedText = o.text;
+                                                    }
+                                                    return {
+                                                        id: o.option_id,
+                                                        text: parsedText,
+                                                    };
+                                                }) || [];
+
+                                            return {
+                                                id: q.question_id,
+                                                text: q.title,
+                                                type: q.type,
+                                                order_index: q.order_index ?? 0,
+                                                options,
+                                            };
+                                        });
 
                                         const finalQuestions =
                                             questions.length > 0
@@ -382,6 +399,39 @@ const SurveyEditorWithAPI = forwardRef(
                                                     order_index:
                                                         res.question
                                                             .order_index,
+                                                    options:
+                                                        res.question.options?.map(
+                                                            (o, idx) => {
+                                                                let parsedText =
+                                                                    "";
+                                                                try {
+                                                                    parsedText =
+                                                                        JSON.parse(
+                                                                            o.text
+                                                                        )
+                                                                            ?.title ||
+                                                                        o.text;
+                                                                } catch {
+                                                                    parsedText =
+                                                                        o.text;
+                                                                }
+
+                                                                // id 중복 방지: 서버 option_id가 없거나 중복될 경우 임시 id 생성
+                                                                const safeId =
+                                                                    o.option_id ||
+                                                                    `temp-opt-${Date.now()}-${idx}`;
+
+                                                                return {
+                                                                    id: safeId,
+                                                                    text: parsedText,
+                                                                    order_index:
+                                                                        o.order_index ??
+                                                                        idx, // order_index 없으면 idx 사용
+                                                                };
+                                                            }
+                                                        ) ||
+                                                        [] ||
+                                                        [],
                                                     isTemp: false,
                                                 }
                                               : q
@@ -422,6 +472,7 @@ const SurveyEditorWithAPI = forwardRef(
                 alert("질문 추가 실패: 서버 오류");
             }
         };
+
         const updateQuestionText = (pageId, questionId, value) => {
             setPages((prev) =>
                 prev.map((p) =>
@@ -482,24 +533,13 @@ const SurveyEditorWithAPI = forwardRef(
         };
 
         const addOption = async (pageId, questionId) => {
-            console.log("addOption 호출:", { pageId, questionId });
-
             const page = pages.find((p) => p.id === pageId);
-            if (!page) {
-                console.log("페이지를 찾을 수 없음:", pageId);
-                return;
-            }
+            if (!page) return;
 
             const question = page.questions.find((q) => q.id === questionId);
-            if (!question) {
-                console.log("질문을 찾을 수 없음:", questionId);
-                return;
-            }
+            if (!question) return;
 
-            // 1. 임시 옵션 UI에 먼저 추가
             const tempOption = { id: `temp-opt-${Date.now()}`, text: "" };
-            console.log("임시 옵션 추가:", tempOption);
-
             setPages((prev) =>
                 prev.map((p) =>
                     p.id === pageId
@@ -522,24 +562,26 @@ const SurveyEditorWithAPI = forwardRef(
             );
 
             try {
-                console.log("서버에 옵션 생성 요청:", {
-                    questionId,
-                    text: tempOption.text,
-                    order_index: question.options ? question.options.length : 0,
-                });
-
-                // 2. 서버에 옵션 생성
                 const res = await createOption({
                     questionId,
                     text: tempOption.text,
                     order_index: question.options ? question.options.length : 0,
                 });
 
-                console.log("서버 응답:", res);
-
                 if (res?.success && res.option) {
-                    // 3. 서버에서 받은 option_id로 임시 옵션 교체
-                    console.log("서버 성공, 임시 옵션 교체 시작");
+                    const newOption = {
+                        id: res.option.option_id,
+                        text: (() => {
+                            try {
+                                return (
+                                    JSON.parse(res.option.text)?.title ||
+                                    res.option.text
+                                );
+                            } catch {
+                                return res.option.text;
+                            }
+                        })(),
+                    };
 
                     setPages((prev) =>
                         prev.map((p) =>
@@ -554,14 +596,7 @@ const SurveyEditorWithAPI = forwardRef(
                                                         (o) =>
                                                             o.id ===
                                                             tempOption.id
-                                                                ? {
-                                                                      id: res
-                                                                          .option
-                                                                          .option_id,
-                                                                      text: res
-                                                                          .option
-                                                                          .text,
-                                                                  }
+                                                                ? newOption
                                                                 : o
                                                     ),
                                                 }
@@ -571,27 +606,23 @@ const SurveyEditorWithAPI = forwardRef(
                                 : p
                         )
                     );
-
-                    console.log("옵션 교체 완료");
                 } else {
-                    console.warn("서버 저장 실패, 임시 옵션 제거");
                     setPages((prev) =>
                         prev.map((p) =>
                             p.id === pageId
                                 ? {
                                       ...p,
-                                      questions: p.questions.map((q) =>
-                                          q.id === questionId
-                                              ? {
-                                                    ...q,
-                                                    options: q.options.filter(
+                                      questions: p.questions.map((q) => ({
+                                          ...q,
+                                          options:
+                                              q.id === questionId
+                                                  ? q.options.filter(
                                                         (o) =>
                                                             o.id !==
                                                             tempOption.id
-                                                    ),
-                                                }
-                                              : q
-                                      ),
+                                                    )
+                                                  : q.options,
+                                      })),
                                   }
                                 : p
                         )
@@ -600,8 +631,6 @@ const SurveyEditorWithAPI = forwardRef(
                 }
             } catch (err) {
                 console.error("선택지 추가 오류:", err);
-
-                // 서버 오류 시 임시 옵션 제거
                 setPages((prev) =>
                     prev.map((p) =>
                         p.id === pageId
@@ -622,7 +651,6 @@ const SurveyEditorWithAPI = forwardRef(
                             : p
                     )
                 );
-
                 alert("선택지 추가 실패: 서버 오류");
             }
         };
@@ -655,7 +683,7 @@ const SurveyEditorWithAPI = forwardRef(
                 )
             );
 
-            if (optionId.toString().startsWith("temp-")) return; // 임시 옵션이면 서버 호출 무시
+            if (optionId.toString().startsWith("temp-")) return;
 
             try {
                 await updateOption(optionId, { title: value });
