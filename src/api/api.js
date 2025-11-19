@@ -81,7 +81,20 @@ export const getMySurveys = async () => {
         return { success: false, surveys: [], message: err.message };
     }
 };
-
+export const deleteSurvey = async (surveyId) => {
+    const token = localStorage.getItem("token"); // 로그인 시 저장한 JWT
+    return axios
+        .delete(`${baseURL}/api/surveys/${surveyId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`, // 헤더에 토큰 추가
+            },
+        })
+        .then((res) => res.data)
+        .catch((err) => {
+            console.error(err);
+            return { success: false, message: err.message };
+        });
+};
 // ============================
 // 페이지 관련 API
 // ============================

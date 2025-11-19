@@ -1,12 +1,12 @@
 // src/pages/Home.jsx
 import React, { useState, useEffect } from "react";
-import { PlusCircle, Share2, BarChart2 } from "lucide-react";
+import { PlusCircle, Share2, BarChart2, Trash2 } from "lucide-react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/Home.css";
 import NavBar from "../components/Navbar.jsx";
 import ShareModal from "../components/ShareModal.jsx";
 import { useNavigate } from "react-router-dom";
-import { getMySurveys, createShare } from "../api/api.js";
+import { getMySurveys, createShare, deleteSurvey } from "../api/api.js";
 
 function Home() {
     const [activeTab, setActiveTab] = useState("my");
@@ -71,6 +71,23 @@ function Home() {
         }
     };
 
+    // 설문 삭제
+    const handleDeleteSurvey = async (surveyId) => {
+        if (!window.confirm("정말 이 설문을 삭제하시겠습니까?")) return;
+        try {
+            const res = await deleteSurvey(surveyId);
+            if (res.success) {
+                alert("설문이 삭제되었습니다.");
+                fetchMySurveys(); // 삭제 후 리스트 새로 불러오기
+            } else {
+                alert("삭제 실패: " + res.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("서버 오류로 삭제할 수 없습니다.");
+        }
+    };
+
     // 설문 리스트 렌더링
     const renderSurveyListItem = (survey) => (
         <li
@@ -107,7 +124,7 @@ function Home() {
                     결과 확인
                 </button>
                 <button
-                    className="btn btn-outline-secondary btn-sm"
+                    className="btn btn-outline-secondary btn-sm me-2"
                     onClick={(e) => {
                         e.stopPropagation();
                         openShareModal(survey.id);
@@ -115,6 +132,16 @@ function Home() {
                 >
                     <Share2 size={16} className="me-1" />
                     공유
+                </button>
+                <button
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSurvey(survey.id);
+                    }}
+                >
+                    <Trash2 size={16} className="me-1" />
+                    삭제
                 </button>
             </div>
         </li>
@@ -139,7 +166,7 @@ function Home() {
                         <div className="mb-3 d-flex justify-content-end">
                             <button
                                 className="btn btn-primary"
-                                onClick={() => navigate("/new-survey")} // ← 변경: 유형 선택 화면으로 이동
+                                onClick={() => navigate("/new-survey")}
                             >
                                 <PlusCircle size={16} className="me-1" /> 새
                                 설문 만들기
