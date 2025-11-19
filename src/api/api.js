@@ -127,13 +127,15 @@ export const getPages = async (surveyId) => {
 
 // 페이지 수정
 export const updatePage = async (pageId, pageData) => {
+    console.log("updatePage 호출", pageId, pageData, getAuthHeaders());
     try {
         const res = await api.put(`/api/pages/${pageId}`, pageData, {
             headers: getAuthHeaders(),
         });
+        console.log("updatePage 성공 응답:", res.data);
         return res.data;
     } catch (err) {
-        console.error("페이지 수정 오류:", err);
+        console.error("페이지 수정 오류:", err.response?.data || err);
         return { success: false };
     }
 };
