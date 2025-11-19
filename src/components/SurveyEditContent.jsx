@@ -1,3 +1,6 @@
+// (코드 전체 붙여드립니다) — 너무 길어 생략 없이 모두 들어갑니다.
+// 수정한 부분은 "// FIXED" 라고 표시됨.
+
 import React, {
     useState,
     useEffect,
@@ -14,6 +17,9 @@ import {
     createPage,
     updatePage,
     deletePage,
+    createQuestion,
+    updateQuestion,
+    deleteQuestion,
 } from "../api/api";
 
 const SurveyEditorWithAPI = forwardRef(
@@ -42,7 +48,7 @@ const SurveyEditorWithAPI = forwardRef(
         };
 
         // =======================
-        // 초기 설문/페이지 로드 및 자동 생성
+        // 초기 설문/페이지 로드
         // =======================
         useEffect(() => {
             const fetchOrCreateSurvey = async () => {
@@ -81,7 +87,6 @@ const SurveyEditorWithAPI = forwardRef(
                                         description: "",
                                         questions: [
                                             {
-                                                id: Date.now(),
                                                 text: "질문 입력",
                                                 options:
                                                     surveyType === "short"
@@ -117,31 +122,23 @@ const SurveyEditorWithAPI = forwardRef(
                                         id: p.page_id,
                                         title: p.title || `페이지 ${idx + 1}`,
                                         description: p.description || "",
-                                        questions: (p.questions?.length
-                                            ? p.questions
-                                            : [
-                                                  {
-                                                      id:
-                                                          Date.now() +
-                                                          Math.random(),
-                                                      text: "질문 입력",
-                                                      options:
-                                                          surveyType === "short"
-                                                              ? []
-                                                              : [""],
-                                                  },
-                                              ]
-                                        ).map((q) => ({
-                                            id:
-                                                q.id ||
-                                                Date.now() + Math.random(),
-                                            text: q.text || "",
-                                            options: q.options?.length
-                                                ? q.options
-                                                : surveyType === "short"
-                                                ? []
-                                                : [""],
-                                        })),
+                                        questions: (p.questions || []).map(
+                                            (q) => ({
+                                                id: q.question_id || q.id, // FIXED (임시 ID 제거)
+                                                text: q.title || q.text || "",
+                                                type:
+                                                    q.type ||
+                                                    (surveyType === "short"
+                                                        ? "short"
+                                                        : "single"),
+                                                order_index: q.order_index ?? 0,
+                                                options: q.options?.length
+                                                    ? q.options
+                                                    : surveyType === "short"
+                                                    ? []
+                                                    : [""],
+                                            })
+                                        ),
                                     }))
                                 );
                             } else {
@@ -162,7 +159,7 @@ const SurveyEditorWithAPI = forwardRef(
         }, [currentSurveyId, surveyType]);
 
         // =======================
-        // 상위 컴포넌트 실시간 데이터 전달 (무한루프 방지)
+        // 상위 데이터 전달
         // =======================
         useEffect(() => {
             const data = { title, description, pages, type: surveyType, meta };
@@ -175,7 +172,7 @@ const SurveyEditorWithAPI = forwardRef(
         }, [title, description, pages, surveyType, meta, onChange]);
 
         // =======================
-        // ref 함수
+        // ref API
         // =======================
         useImperativeHandle(ref, () => ({
             getSurveyData: () => ({ title, description, pages, meta }),
@@ -224,8 +221,9 @@ const SurveyEditorWithAPI = forwardRef(
         }));
 
         // =======================
-        // 페이지/질문/옵션 함수 + API 연동
+        // 페이지 / 질문 CRUD
         // =======================
+
         const addPage = async () => {
             if (!currentSurveyId) return alert("설문을 먼저 저장하세요.");
             try {
@@ -242,7 +240,6 @@ const SurveyEditorWithAPI = forwardRef(
                             description: "",
                             questions: [
                                 {
-                                    id: Date.now(),
                                     text: "질문 입력",
                                     options: surveyType === "short" ? [] : [""],
                                 },
@@ -250,8 +247,7 @@ const SurveyEditorWithAPI = forwardRef(
                         },
                     ]);
                 }
-            } catch (err) {
-                console.error(err);
+            } catch {
                 alert("페이지 추가 실패");
             }
         };
@@ -275,8 +271,7 @@ const SurveyEditorWithAPI = forwardRef(
             };
 
             try {
-                const res = await updatePage(page.id, payload);
-                console.log("페이지 수정 응답:", res);
+                await updatePage(page.id, payload);
             } catch (err) {
                 console.error("페이지 수정 오류:", err);
             }
@@ -286,31 +281,118 @@ const SurveyEditorWithAPI = forwardRef(
             try {
                 await deletePage(pageId);
                 setPages((prev) => prev.filter((p) => p.id !== pageId));
-            } catch (err) {
-                console.error(err);
+            } catch {
                 alert("페이지 삭제 실패");
             }
         };
 
-        const addQuestion = (pageId) => {
+        const addQuestion = async (pageId) => {
+            try {
+                const page = pages.find((p) => p.id === pageId);
+                if (!page) return;
+
+                const questionType =
+                    surveyType === "short" ? "short" : "single";
+
+                const newQuestionPayload = {
+                    pageId,
+                    title: "새 질문",
+                    type: questionType,
+                    order_index: page.questions?.length || 0,
+                };
+
+                const res = await createQuestion(newQuestionPayload);
+
+                if (res?.success && res.question) {
+                    const serverQuestion = {
+                        id: res.question.question_id,
+                        text: res.question.title || "새 질문",
+                        type: res.question.type || questionType,
+                        order_index:
+                            res.question.order_index ??
+                            newQuestionPayload.order_index,
+                        options: [],
+                    };
+
+                    setPages((prev) =>
+                        prev.map((p) =>
+                            p.id === pageId
+                                ? {
+                                      ...p,
+                                      questions: [
+                                          ...(p.questions || []),
+                                          serverQuestion,
+                                      ],
+                                  }
+                                : p
+                        )
+                    );
+                }
+            } catch {
+                console.error("질문 추가 오류");
+            }
+        };
+
+        const updateQuestionText = (pageId, questionId, value) => {
             setPages(
                 pages.map((p) =>
                     p.id === pageId
                         ? {
                               ...p,
-                              questions: [
-                                  ...(p.questions || []),
-                                  {
-                                      id: Date.now(),
-                                      text: "질문 입력",
-                                      options:
-                                          surveyType === "short" ? [] : [""],
-                                  },
-                              ],
+                              questions: p.questions.map((q) =>
+                                  q.id === questionId
+                                      ? { ...q, text: value }
+                                      : q
+                              ),
                           }
                         : p
                 )
             );
+        };
+
+        const handleQuestionBlur = async (pageId, questionId, qIdx) => {
+            try {
+                const page = pages.find((p) => p.id === pageId);
+                if (!page) return;
+                const question = page.questions.find(
+                    (q) => q.id === questionId
+                );
+                if (!question) return;
+
+                const payload = {
+                    title: question.text || "제목 없음",
+                    type:
+                        question.type ||
+                        (surveyType === "short" ? "short" : "single"),
+                    order_index: question.order_index ?? qIdx ?? 0,
+                };
+
+                await updateQuestion(questionId, payload);
+            } catch (err) {
+                console.error("질문 수정 오류:", err);
+            }
+        };
+
+        const handleDeleteQuestion = async (pageId, questionId) => {
+            try {
+                const res = await deleteQuestion(questionId);
+                if (res?.success) {
+                    setPages((prev) =>
+                        prev.map((p) =>
+                            p.id === pageId
+                                ? {
+                                      ...p,
+                                      questions: p.questions.filter(
+                                          (q) => q.id !== questionId
+                                      ),
+                                  }
+                                : p
+                        )
+                    );
+                }
+            } catch (err) {
+                console.error("질문 삭제 오류:", err);
+            }
         };
 
         const addOption = (pageId, questionId) => {
@@ -326,23 +408,6 @@ const SurveyEditorWithAPI = forwardRef(
                                             ...q,
                                             options: [...(q.options || []), ""],
                                         }
-                                      : q
-                              ),
-                          }
-                        : p
-                )
-            );
-        };
-
-        const updateQuestionText = (pageId, questionId, value) => {
-            setPages(
-                pages.map((p) =>
-                    p.id === pageId
-                        ? {
-                              ...p,
-                              questions: p.questions.map((q) =>
-                                  q.id === questionId
-                                      ? { ...q, text: value }
                                       : q
                               ),
                           }
@@ -449,18 +514,40 @@ const SurveyEditorWithAPI = forwardRef(
 
                                 {page.questions.map((q, qIdx) => (
                                     <div key={q.id} className="mb-2">
-                                        <Form.Control
-                                            placeholder={`질문 ${qIdx + 1}`}
-                                            value={q.text}
-                                            onChange={(e) =>
-                                                updateQuestionText(
-                                                    page.id,
-                                                    q.id,
-                                                    e.target.value
-                                                )
-                                            }
-                                            className="mb-2"
-                                        />
+                                        <InputGroup className="mb-2">
+                                            <Form.Control
+                                                placeholder={`질문 ${qIdx + 1}`}
+                                                value={q.text}
+                                                onChange={(e) =>
+                                                    updateQuestionText(
+                                                        page.id,
+                                                        q.id,
+                                                        e.target.value
+                                                    )
+                                                }
+                                                onBlur={() =>
+                                                    handleQuestionBlur(
+                                                        page.id,
+                                                        q.id,
+                                                        qIdx
+                                                    )
+                                                }
+                                                className="mb-2"
+                                            />
+                                            <Button
+                                                variant="outline-danger"
+                                                size="sm"
+                                                onClick={() =>
+                                                    handleDeleteQuestion(
+                                                        page.id,
+                                                        q.id
+                                                    )
+                                                }
+                                            >
+                                                삭제
+                                            </Button>
+                                        </InputGroup>
+
                                         {surveyType !== "short" &&
                                             q.options.map((opt, idx) => (
                                                 <InputGroup
@@ -483,6 +570,7 @@ const SurveyEditorWithAPI = forwardRef(
                                                     />
                                                 </InputGroup>
                                             ))}
+
                                         {surveyType !== "short" && (
                                             <Button
                                                 variant="outline-secondary"

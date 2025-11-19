@@ -172,7 +172,9 @@ export const reorderPages = async (surveyId, orderedPageIds) => {
 // 질문 관련 API
 // ============================
 
+// ================================
 // 질문 생성
+// ================================
 export const createQuestion = async (questionData) => {
     try {
         const res = await api.post(`/api/questions`, questionData, {
@@ -185,25 +187,36 @@ export const createQuestion = async (questionData) => {
     }
 };
 
-// 질문 수정
-export const updateQuestionAPI = async (questionId, questionData) => {
+// ================================
+// 질문 수정 (updateQuestion 이름으로 통일)
+// ================================
+export const updateQuestion = async (questionId, questionData) => {
     try {
         const res = await api.put(
-            `/api/questions/${questionId}`,
+            `/api/questions/${questionId}/edit`, // /edit 추가
             questionData,
             {
                 headers: getAuthHeaders(),
             }
         );
+        console.log(
+            `[updateQuestion] 성공! questionId: ${questionId}`,
+            res.data
+        );
         return res.data;
     } catch (err) {
-        console.error("질문 수정 오류:", err);
+        console.error(
+            `[updateQuestion] 실패! questionId: ${questionId}`,
+            err.response?.data || err.message
+        );
         return { success: false, message: err.message };
     }
 };
 
-// 질문 삭제
-export const deleteQuestionAPI = async (questionId) => {
+// ================================
+// 질문 삭제 (deleteQuestion 이름으로 통일)
+// ================================
+export const deleteQuestion = async (questionId) => {
     try {
         const res = await api.delete(`/api/questions/${questionId}`, {
             headers: getAuthHeaders(),
