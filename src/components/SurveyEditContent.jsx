@@ -17,7 +17,10 @@ import {
     createQuestion,
     updateQuestion,
     deleteQuestion,
-    getQuestionsByPage, // FIXED: 페이지 질문 조회 API 추가
+    getQuestionsByPage,
+    createOption,
+    updateOption,
+    deleteOption,
 } from "../api/api";
 
 const SurveyEditorWithAPI = forwardRef(
@@ -46,17 +49,15 @@ const SurveyEditorWithAPI = forwardRef(
         };
 
         // =======================
-        // 초기 설문/페이지 로드 + 질문 리스트 연결
+        // 초기 설문/페이지 로드 + 질문/선택지 불러오기
         // =======================
         useEffect(() => {
             const fetchOrCreateSurvey = async () => {
-                if (!surveyType) return; // surveyType 준비될 때까지 대기
-
+                if (!surveyType) return;
                 try {
                     let sid = currentSurveyId;
 
                     if (currentSurveyId === "new") {
-                        // 1. 새 설문 생성
                         const res = await createSurvey({
                             title: "제목 없음",
                             subtitle: "",
@@ -72,11 +73,8 @@ const SurveyEditorWithAPI = forwardRef(
 
                         if (res?.success) {
                             sid = res.survey?.survey_id || res.survey?.id;
-                            if (!sid)
-                                throw new Error("서버 응답에 ID가 없습니다.");
                             setCurrentSurveyId(sid);
 
-                            // 2. 첫 페이지 생성
                             const pageRes = await createPage(sid, {
                                 title: "페이지 1",
                                 order_index: 0,
@@ -106,7 +104,6 @@ const SurveyEditorWithAPI = forwardRef(
                             }
                         }
                     } else {
-                        // 3. 기존 설문 불러오기
                         const res = await getSurveyById(sid);
                         if (res?.success) {
                             setTitle(res.survey?.title || "");
@@ -137,10 +134,13 @@ const SurveyEditorWithAPI = forwardRef(
                                             text: q.title,
                                             type: q.type,
                                             order_index: q.order_index ?? 0,
-                                            options: [], // 필요 시 옵션 추가
+                                            options:
+                                                q.options?.map((o) => ({
+                                                    id: o.option_id,
+                                                    text: o.title,
+                                                })) || [],
                                         }));
 
-                                        // 질문이 없으면 임시 질문 1개 추가
                                         const finalQuestions =
                                             questions.length > 0
                                                 ? questions
@@ -158,7 +158,12 @@ const SurveyEditorWithAPI = forwardRef(
                                                               surveyType ===
                                                               "short"
                                                                   ? []
-                                                                  : [""],
+                                                                  : [
+                                                                        {
+                                                                            id: `temp-opt-${Date.now()}`,
+                                                                            text: "",
+                                                                        },
+                                                                    ],
                                                           isTemp: true,
                                                       },
                                                   ];
@@ -192,7 +197,7 @@ const SurveyEditorWithAPI = forwardRef(
         }, [currentSurveyId, surveyType]);
 
         // =======================
-        // 상위 데이터 전달
+        // 상위 컴포넌트로 데이터 전달
         // =======================
         useEffect(() => {
             const data = { title, description, pages, type: surveyType, meta };
@@ -234,8 +239,6 @@ const SurveyEditorWithAPI = forwardRef(
                         if (res?.success) {
                             const newId =
                                 res.survey?.survey_id || res.survey?.id;
-                            if (!newId)
-                                throw new Error("서버 응답에 ID가 없습니다.");
                             setCurrentSurveyId(newId);
                             alert("설문 저장 완료!");
                         } else {
@@ -254,9 +257,8 @@ const SurveyEditorWithAPI = forwardRef(
         }));
 
         // =======================
-        // 페이지 / 질문 CRUD
+        // 페이지/질문 CRUD
         // =======================
-
         const addPage = async () => {
             if (!currentSurveyId) return alert("설문을 먼저 저장하세요.");
             try {
@@ -280,7 +282,15 @@ const SurveyEditorWithAPI = forwardRef(
                                             ? "short"
                                             : "single",
                                     order_index: 0,
-                                    options: surveyType === "short" ? [] : [""],
+                                    options:
+                                        surveyType === "short"
+                                            ? []
+                                            : [
+                                                  {
+                                                      id: `temp-opt-${Date.now()}`,
+                                                      text: "",
+                                                  },
+                                              ],
                                     isTemp: true,
                                 },
                             ],
@@ -293,29 +303,26 @@ const SurveyEditorWithAPI = forwardRef(
         };
 
         const updatePageTitle = (page, pageIdx, newTitle) => {
-            const safeTitle = newTitle || "제목 없음";
             setPages((prev) =>
                 prev.map((p) =>
-                    p.id === page.id ? { ...p, title: safeTitle } : p
+                    p.id === page.id
+                        ? { ...p, title: newTitle || "제목 없음" }
+                        : p
                 )
             );
         };
 
         const handlePageBlur = async (page, pageIdx) => {
-            const targetPage = pages.find((p) => p.id === page.id);
-            if (!targetPage) return;
-
-            const payload = {
-                title: targetPage.title || "제목 없음",
-                order_index: pageIdx ?? 0,
-            };
-
             try {
-                await updatePage(page.id, payload);
+                await updatePage(page.id, {
+                    title: page.title || "제목 없음",
+                    order_index: pageIdx ?? 0,
+                });
             } catch (err) {
                 console.error("페이지 수정 오류:", err);
             }
         };
+
         const deletePageById = async (pageId) => {
             try {
                 await deletePage(pageId);
@@ -330,15 +337,16 @@ const SurveyEditorWithAPI = forwardRef(
             if (!page) return;
 
             const questionType = surveyType === "short" ? "short" : "single";
-
-            // 1) 임시 질문 추가 (UI용)
             const tempQuestion = {
-                id: `temp-${Date.now()}-${Math.random()}`, // 임시 ID 문자열로 변경
+                id: `temp-${Date.now()}-${Math.random()}`,
                 text: "새 질문",
                 type: questionType,
                 order_index: page.questions.length,
-                options: [],
-                isTemp: true, // 임시 질문 표시용 플래그
+                options:
+                    questionType === "short"
+                        ? []
+                        : [{ id: `temp-opt-${Date.now()}`, text: "" }],
+                isTemp: true,
             };
 
             setPages((prev) =>
@@ -350,7 +358,6 @@ const SurveyEditorWithAPI = forwardRef(
             );
 
             try {
-                // 2) 서버 저장
                 const res = await createQuestion({
                     pageId,
                     title: tempQuestion.text,
@@ -359,7 +366,6 @@ const SurveyEditorWithAPI = forwardRef(
                 });
 
                 if (res?.success && res.question) {
-                    // 3) 서버에서 받은 ID로 임시 ID 교체
                     setPages((prev) =>
                         prev.map((p) =>
                             p.id === pageId
@@ -376,7 +382,7 @@ const SurveyEditorWithAPI = forwardRef(
                                                     order_index:
                                                         res.question
                                                             .order_index,
-                                                    isTemp: false, // 서버 저장 완료
+                                                    isTemp: false,
                                                 }
                                               : q
                                       ),
@@ -385,7 +391,6 @@ const SurveyEditorWithAPI = forwardRef(
                         )
                     );
                 } else {
-                    // 서버 저장 실패 시 임시 질문 롤백
                     setPages((prev) =>
                         prev.map((p) =>
                             p.id === pageId
@@ -402,7 +407,6 @@ const SurveyEditorWithAPI = forwardRef(
                 }
             } catch (err) {
                 console.error("질문 추가 오류:", err);
-                // 서버 오류 시 임시 질문 롤백
                 setPages((prev) =>
                     prev.map((p) =>
                         p.id === pageId
@@ -418,10 +422,9 @@ const SurveyEditorWithAPI = forwardRef(
                 alert("질문 추가 실패: 서버 오류");
             }
         };
-
         const updateQuestionText = (pageId, questionId, value) => {
-            setPages(
-                pages.map((p) =>
+            setPages((prev) =>
+                prev.map((p) =>
                     p.id === pageId
                         ? {
                               ...p,
@@ -441,18 +444,16 @@ const SurveyEditorWithAPI = forwardRef(
             if (!page) return;
 
             const question = page.questions.find((q) => q.id === questionId);
-            if (!question || question.isTemp) return; // 임시 질문이면 무시
-
-            const payload = {
-                title: question.text || "제목 없음",
-                type:
-                    question.type ||
-                    (surveyType === "short" ? "short" : "single"),
-                order_index: question.order_index ?? qIdx ?? 0,
-            };
+            if (!question || question.isTemp) return;
 
             try {
-                await updateQuestion(questionId, payload);
+                await updateQuestion(questionId, {
+                    title: question.text || "제목 없음",
+                    type:
+                        question.type ||
+                        (surveyType === "short" ? "short" : "single"),
+                    order_index: question.order_index ?? qIdx ?? 0,
+                });
             } catch (err) {
                 console.error("질문 수정 오류:", err);
             }
@@ -480,10 +481,27 @@ const SurveyEditorWithAPI = forwardRef(
             }
         };
 
-        const addOption = (pageId, questionId) => {
-            if (surveyType === "short") return;
-            setPages(
-                pages.map((p) =>
+        const addOption = async (pageId, questionId) => {
+            console.log("addOption 호출:", { pageId, questionId });
+
+            const page = pages.find((p) => p.id === pageId);
+            if (!page) {
+                console.log("페이지를 찾을 수 없음:", pageId);
+                return;
+            }
+
+            const question = page.questions.find((q) => q.id === questionId);
+            if (!question) {
+                console.log("질문을 찾을 수 없음:", questionId);
+                return;
+            }
+
+            // 1. 임시 옵션 UI에 먼저 추가
+            const tempOption = { id: `temp-opt-${Date.now()}`, text: "" };
+            console.log("임시 옵션 추가:", tempOption);
+
+            setPages((prev) =>
+                prev.map((p) =>
                     p.id === pageId
                         ? {
                               ...p,
@@ -491,7 +509,10 @@ const SurveyEditorWithAPI = forwardRef(
                                   q.id === questionId
                                       ? {
                                             ...q,
-                                            options: [...(q.options || []), ""],
+                                            options: [
+                                                ...(q.options || []),
+                                                tempOption,
+                                            ],
                                         }
                                       : q
                               ),
@@ -499,11 +520,121 @@ const SurveyEditorWithAPI = forwardRef(
                         : p
                 )
             );
+
+            try {
+                console.log("서버에 옵션 생성 요청:", {
+                    questionId,
+                    text: tempOption.text,
+                    order_index: question.options ? question.options.length : 0,
+                });
+
+                // 2. 서버에 옵션 생성
+                const res = await createOption({
+                    questionId,
+                    text: tempOption.text,
+                    order_index: question.options ? question.options.length : 0,
+                });
+
+                console.log("서버 응답:", res);
+
+                if (res?.success && res.option) {
+                    // 3. 서버에서 받은 option_id로 임시 옵션 교체
+                    console.log("서버 성공, 임시 옵션 교체 시작");
+
+                    setPages((prev) =>
+                        prev.map((p) =>
+                            p.id === pageId
+                                ? {
+                                      ...p,
+                                      questions: p.questions.map((q) =>
+                                          q.id === questionId
+                                              ? {
+                                                    ...q,
+                                                    options: q.options.map(
+                                                        (o) =>
+                                                            o.id ===
+                                                            tempOption.id
+                                                                ? {
+                                                                      id: res
+                                                                          .option
+                                                                          .option_id,
+                                                                      text: res
+                                                                          .option
+                                                                          .text,
+                                                                  }
+                                                                : o
+                                                    ),
+                                                }
+                                              : q
+                                      ),
+                                  }
+                                : p
+                        )
+                    );
+
+                    console.log("옵션 교체 완료");
+                } else {
+                    console.warn("서버 저장 실패, 임시 옵션 제거");
+                    setPages((prev) =>
+                        prev.map((p) =>
+                            p.id === pageId
+                                ? {
+                                      ...p,
+                                      questions: p.questions.map((q) =>
+                                          q.id === questionId
+                                              ? {
+                                                    ...q,
+                                                    options: q.options.filter(
+                                                        (o) =>
+                                                            o.id !==
+                                                            tempOption.id
+                                                    ),
+                                                }
+                                              : q
+                                      ),
+                                  }
+                                : p
+                        )
+                    );
+                    alert("선택지 추가 실패");
+                }
+            } catch (err) {
+                console.error("선택지 추가 오류:", err);
+
+                // 서버 오류 시 임시 옵션 제거
+                setPages((prev) =>
+                    prev.map((p) =>
+                        p.id === pageId
+                            ? {
+                                  ...p,
+                                  questions: p.questions.map((q) =>
+                                      q.id === questionId
+                                          ? {
+                                                ...q,
+                                                options: q.options.filter(
+                                                    (o) =>
+                                                        o.id !== tempOption.id
+                                                ),
+                                            }
+                                          : q
+                                  ),
+                              }
+                            : p
+                    )
+                );
+
+                alert("선택지 추가 실패: 서버 오류");
+            }
         };
 
-        const updateOptionText = (pageId, questionId, idx, value) => {
-            setPages(
-                pages.map((p) =>
+        const updateOptionText = async (
+            pageId,
+            questionId,
+            optionId,
+            value
+        ) => {
+            setPages((prev) =>
+                prev.map((p) =>
                     p.id === pageId
                         ? {
                               ...p,
@@ -511,8 +642,10 @@ const SurveyEditorWithAPI = forwardRef(
                                   q.id === questionId
                                       ? {
                                             ...q,
-                                            options: q.options.map((o, i) =>
-                                                i === idx ? value : o
+                                            options: q.options.map((o) =>
+                                                o.id === optionId
+                                                    ? { ...o, text: value }
+                                                    : o
                                             ),
                                         }
                                       : q
@@ -521,11 +654,48 @@ const SurveyEditorWithAPI = forwardRef(
                         : p
                 )
             );
+
+            if (optionId.toString().startsWith("temp-")) return; // 임시 옵션이면 서버 호출 무시
+
+            try {
+                await updateOption(optionId, { title: value });
+            } catch (err) {
+                console.error("선택지 수정 오류:", err);
+            }
+        };
+
+        const deleteOptionById = async (pageId, questionId, optionId) => {
+            try {
+                const res = await deleteOption(optionId);
+                if (res?.success) {
+                    setPages((prev) =>
+                        prev.map((p) =>
+                            p.id === pageId
+                                ? {
+                                      ...p,
+                                      questions: p.questions.map((q) =>
+                                          q.id === questionId
+                                              ? {
+                                                    ...q,
+                                                    options: q.options.filter(
+                                                        (o) => o.id !== optionId
+                                                    ),
+                                                }
+                                              : q
+                                      ),
+                                  }
+                                : p
+                        )
+                    );
+                }
+            } catch (err) {
+                console.error("선택지 삭제 오류:", err);
+            }
         };
 
         const updatePageDescription = (pageId, value) => {
-            setPages(
-                pages.map((p) =>
+            setPages((prev) =>
+                prev.map((p) =>
                     p.id === pageId ? { ...p, description: value } : p
                 )
             );
@@ -582,6 +752,7 @@ const SurveyEditorWithAPI = forwardRef(
                                         </Button>
                                     </InputGroup>
                                 </Card.Title>
+
                                 <Form.Group className="mb-2">
                                     <Form.Control
                                         as="textarea"
@@ -617,7 +788,6 @@ const SurveyEditorWithAPI = forwardRef(
                                                         qIdx
                                                     )
                                                 }
-                                                className="mb-2"
                                             />
                                             <Button
                                                 variant="outline-danger"
@@ -637,22 +807,35 @@ const SurveyEditorWithAPI = forwardRef(
                                             q.options.map((opt, idx) => (
                                                 <InputGroup
                                                     className="mb-2"
-                                                    key={idx}
+                                                    key={opt.id}
                                                 >
                                                     <Form.Control
                                                         placeholder={`보기 ${
                                                             idx + 1
                                                         }`}
-                                                        value={opt}
+                                                        value={opt.text}
                                                         onChange={(e) =>
                                                             updateOptionText(
                                                                 page.id,
                                                                 q.id,
-                                                                idx,
+                                                                opt.id,
                                                                 e.target.value
                                                             )
                                                         }
                                                     />
+                                                    <Button
+                                                        variant="outline-danger"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            deleteOptionById(
+                                                                page.id,
+                                                                q.id,
+                                                                opt.id
+                                                            )
+                                                        }
+                                                    >
+                                                        삭제
+                                                    </Button>
                                                 </InputGroup>
                                             ))}
 

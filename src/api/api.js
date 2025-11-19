@@ -306,5 +306,60 @@ export const getSurveyByShareLink = async (shareLink) => {
         return { success: false, message: err.message };
     }
 };
+export const createOption = async ({ questionId, text, order_index = 0 }) => {
+    const token = localStorage.getItem("token"); // 로그인 토큰
+    try {
+        const res = await api.post(
+            `/api/options/${questionId}`,
+            { text, order_index },
+            {
+                headers: { Authorization: `Bearer ${token}` },
+            }
+        );
+        return res.data;
+    } catch (err) {
+        console.error("선택지 추가 오류:", err);
+        return { success: false, error: err };
+    }
+};
+
+// =========================
+// 2) 선택지 수정
+// PUT /api/options/:optionId
+// body: { text }
+// =========================
+export const updateOption = async (optionId, text) => {
+    const token = localStorage.getItem("token");
+    try {
+        const res = await api.put(
+            `/api/options/${optionId}`,
+            { text },
+            {
+                headers: { Authorization: `Bearer ${token}` },
+            }
+        );
+        return res.data;
+    } catch (err) {
+        console.error("옵션 수정 오류:", err);
+        return { success: false, error: err };
+    }
+};
+
+// =========================
+// 3) 선택지 삭제
+// DELETE /api/options/:optionId
+// =========================
+export const deleteOption = async (optionId) => {
+    const token = localStorage.getItem("token");
+    try {
+        const res = await api.delete(`/api/options/${optionId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        return res.data;
+    } catch (err) {
+        console.error("옵션 삭제 오류:", err);
+        return { success: false, error: err };
+    }
+};
 
 export default api;
