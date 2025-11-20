@@ -396,4 +396,20 @@ export const getSurveySummary = async (surveyId) => {
         return { success: false, summary: [] };
     }
 };
+// ================================
+// 내 설문 검색
+// ================================
+export const searchMySurveys = async (query) => {
+    try {
+        const res = await api.get("/api/surveys/my/search", {
+            params: { q: query },
+            headers: getAuthHeaders(), // 이미 토큰 가져오는 함수 사용
+        });
+        return res.data;
+    } catch (err) {
+        console.error("searchMySurveys error:", err);
+        return { success: false, message: err.message };
+    }
+};
+
 export default api;

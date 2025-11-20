@@ -5,8 +5,13 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/Home.css";
 import NavBar from "../components/Navbar.jsx";
 import ShareModal from "../components/ShareModal.jsx";
-import { useNavigate } from "react-router-dom";
-import { getMySurveys, createShare, deleteSurvey } from "../api/api.js";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+    getMySurveys,
+    searchMySurveys,
+    createShare,
+    deleteSurvey,
+} from "../api/api.js";
 
 function Home() {
     const [activeTab, setActiveTab] = useState("my");
@@ -15,17 +20,17 @@ function Home() {
     const [showShareModal, setShowShareModal] = useState(false);
     const [selectedSurveyId, setSelectedSurveyId] = useState(null);
     const navigate = useNavigate();
+    const location = useLocation();
 
     // 내 설문 리스트 불러오기
     const fetchMySurveys = async () => {
         try {
             const res = await getMySurveys();
-            console.log("getMySurveys:", res);
             if (res.success) {
                 const surveys = res.surveys.map((s) => ({
                     id: s.survey_id,
                     title: s.title,
-                    type: s.type || "single", // <- surveyType 추가
+                    type: s.type || "single",
                     status:
                         s.end_date && new Date(s.end_date) > new Date()
                             ? "진행 중"
@@ -46,10 +51,40 @@ function Home() {
         fetchMySurveys();
     }, []);
 
+    // ================================
+    // NavBar 검색 결과 처리
+    // ================================
+    const handleSearch = async (query) => {
+        if (!query.trim()) {
+            fetchMySurveys();
+            return;
+        }
+
+        try {
+            const res = await searchMySurveys(query);
+            if (res.success) {
+                const surveys = res.surveys.map((s) => ({
+                    id: s.survey_id,
+                    title: s.title,
+                    type: s.type || "single",
+                    status:
+                        s.end_date && new Date(s.end_date) > new Date()
+                            ? "진행 중"
+                            : "종료됨",
+                    endDate: s.end_date ? s.end_date.slice(0, 10) : "미정",
+                }));
+                setMySurveys(surveys);
+            } else {
+                alert("검색 실패: " + res.message);
+            }
+        } catch (err) {
+            console.error("검색 오류:", err);
+            alert("검색 중 오류가 발생했습니다.");
+        }
+    };
+
     // 설문 클릭 시 EditSurvey로 이동
     const handleSurveyClick = (surveyId, surveyType = "single") => {
-        console.log("설문 클릭:", surveyId, surveyType);
-        // 쿼리로 surveyType 전달
         navigate(`/edit-survey/${surveyId}?type=${surveyType}`);
     };
 
@@ -61,11 +96,8 @@ function Home() {
 
     const handleShare = async (emails = []) => {
         if (!selectedSurveyId) return null;
-
         try {
             const res = await createShare(selectedSurveyId, emails);
-            console.log("createShare 응답:", res);
-
             if (res.success) {
                 const link = `${window.location.origin}/survey/${res.shareLink}`;
                 navigator.clipboard.writeText(link);
@@ -88,10 +120,9 @@ function Home() {
         if (!window.confirm("정말 이 설문을 삭제하시겠습니까?")) return;
         try {
             const res = await deleteSurvey(surveyId);
-            console.log("deleteSurvey 응답:", res);
             if (res.success) {
                 alert("설문이 삭제되었습니다.");
-                fetchMySurveys(); // 삭제 후 리스트 새로 불러오기
+                fetchMySurveys();
             } else {
                 alert("삭제 실패: " + res.message);
             }
@@ -107,7 +138,7 @@ function Home() {
             key={survey.id}
             className="list-group-item d-flex justify-content-between align-items-center survey-list-item"
             style={{ cursor: "pointer" }}
-            onClick={() => handleSurveyClick(survey.id, survey.type)} // surveyType 전달
+            onClick={() => handleSurveyClick(survey.id, survey.type)}
         >
             <div>
                 <h6 className="mb-1">{survey.title}</h6>
@@ -130,7 +161,6 @@ function Home() {
                     className="btn btn-outline-primary btn-sm me-2"
                     onClick={(e) => {
                         e.stopPropagation();
-                        console.log("결과 확인 클릭:", survey.id);
                         navigate(
                             `/edit-survey/${survey.id}?type=${survey.type}`
                         );
@@ -143,7 +173,6 @@ function Home() {
                     className="btn btn-outline-secondary btn-sm me-2"
                     onClick={(e) => {
                         e.stopPropagation();
-                        console.log("공유 클릭:", survey.id);
                         openShareModal(survey.id);
                     }}
                 >
@@ -154,7 +183,6 @@ function Home() {
                     className="btn btn-outline-danger btn-sm"
                     onClick={(e) => {
                         e.stopPropagation();
-                        console.log("삭제 클릭:", survey.id);
                         handleDeleteSurvey(survey.id);
                     }}
                 >
@@ -167,7 +195,11 @@ function Home() {
 
     return (
         <>
-            <NavBar activeTab={activeTab} setActiveTab={setActiveTab} />
+            <NavBar
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                onSearch={handleSearch} // NavBar 검색과 연결
+            />
 
             <div
                 className="home-container container py-5"
@@ -179,6 +211,8 @@ function Home() {
                             ? "내 설문 리스트"
                             : "참여한 설문 리스트"}
                     </h5>
+
+                    {/* 홈 내 검색창 제거 */}
 
                     {activeTab === "my" && (
                         <div className="mb-3 d-flex justify-content-end">
@@ -200,7 +234,6 @@ function Home() {
                 </section>
             </div>
 
-            {/* 공유 모달 */}
             {showShareModal && (
                 <ShareModal
                     show={showShareModal}

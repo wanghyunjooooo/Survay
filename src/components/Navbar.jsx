@@ -1,23 +1,28 @@
+// src/components/Navbar.jsx
 import React, { useState } from "react";
 import { Navbar, Nav, Container, Form, FormControl } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import "../styles/Navbar.css";
 import { Search } from "lucide-react";
 
-function NavBar({ activeTab, setActiveTab }) {
+function NavBar({ activeTab, setActiveTab, onSearch }) {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user"));
     const [query, setQuery] = useState("");
 
+    // 로그아웃 처리
     const handleLogout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         navigate("/login");
     };
 
+    // 검색 처리: 홈으로 이동하면서 검색 실행
     const handleSearch = () => {
-        if (!query) return;
-        navigate(`/search-results?query=${encodeURIComponent(query)}`);
+        const trimmedQuery = query.trim();
+        if (!trimmedQuery) return;
+        // 홈 컴포넌트에 검색 query 전달
+        if (onSearch) onSearch(trimmedQuery);
         setQuery("");
     };
 
@@ -62,7 +67,10 @@ function NavBar({ activeTab, setActiveTab }) {
                     {/* 검색창 */}
                     <Form
                         className="d-flex me-3 align-items-center"
-                        onSubmit={(e) => e.preventDefault()}
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSearch();
+                        }}
                         style={{ width: "400px" }}
                     >
                         <FormControl
@@ -71,6 +79,9 @@ function NavBar({ activeTab, setActiveTab }) {
                             className="me-2 flex-grow-1"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) =>
+                                e.key === "Enter" && handleSearch()
+                            }
                         />
                         <Search
                             size={22}
