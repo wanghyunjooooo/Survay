@@ -14,8 +14,8 @@ function EditSurvey() {
 
     // query에서 surveyType 받아오기
     const typeFromQuery = searchParams.get("type");
-
-    const [activeTab, setActiveTab] = useState("edit");
+    const tabFromQuery = searchParams.get("tab"); // "results" 읽기
+    const [activeTab, setActiveTab] = useState(tabFromQuery || "edit");
     const [surveyData, setSurveyData] = useState(null);
     const [surveyType, setSurveyType] = useState(typeFromQuery || null);
     const [loading, setLoading] = useState(true);

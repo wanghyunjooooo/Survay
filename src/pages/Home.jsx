@@ -162,8 +162,8 @@ function Home() {
                     onClick={(e) => {
                         e.stopPropagation();
                         navigate(
-                            `/edit-survey/${survey.id}?type=${survey.type}`
-                        );
+                            `/edit-survey/${survey.id}?type=${survey.type}&tab=results`
+                        ); // tab=results 추가
                     }}
                 >
                     <BarChart2 size={16} className="me-1" />
