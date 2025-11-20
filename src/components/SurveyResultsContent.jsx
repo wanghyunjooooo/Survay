@@ -63,14 +63,16 @@ function SurveyResultsContent({ surveyId }) {
                     const oMap = {};
                     if (s.pages) {
                         s.pages.forEach((page) => {
-                            page.questions.forEach((q) => {
-                                qMap[q.id] = q.text;
-                                if (q.options) {
-                                    q.options.forEach((opt) => {
-                                        oMap[opt.id] = opt.text;
-                                    });
-                                }
-                            });
+                            if (page.questions) {
+                                page.questions.forEach((q) => {
+                                    qMap[q.id] = q.text;
+                                    if (q.options) {
+                                        q.options.forEach((opt) => {
+                                            oMap[opt.id] = opt.text;
+                                        });
+                                    }
+                                });
+                            }
                         });
                     }
                     setQuestionMap(qMap);
@@ -107,16 +109,29 @@ function SurveyResultsContent({ surveyId }) {
     if (!surveyInfo)
         return <div className="results-container">설문 정보 없음</div>;
 
-    // Pie 차트 데이터
+    // Pie 차트 데이터 안전하게 생성
     const getPieChartData = (questionId) => {
         const filtered = summaryData.filter(
             (item) => item.question_id === questionId
         );
+
+        const labels = filtered.map((f) => {
+            try {
+                const parsed = f.option_text ? JSON.parse(f.option_text) : {};
+                return parsed.title || "알 수 없음";
+            } catch (err) {
+                console.warn("옵션 파싱 실패:", f.option_text, err);
+                return "알 수 없음";
+            }
+        });
+
+        const data = filtered.map((f) => Number(f.count) || 0);
+
         return {
-            labels: filtered.map((f) => JSON.parse(f.option_text).title),
+            labels,
             datasets: [
                 {
-                    data: filtered.map((f) => Number(f.count)),
+                    data,
                     backgroundColor: [
                         "#FF6384",
                         "#36A2EB",
@@ -139,11 +154,10 @@ function SurveyResultsContent({ surveyId }) {
         const dates = [];
         const counts = {};
 
-        // 오늘 포함 최근 7일 생성
         for (let i = 6; i >= 0; i--) {
             const d = new Date(today);
             d.setDate(today.getDate() - i);
-            const key = d.toISOString().split("T")[0]; // yyyy-mm-dd
+            const key = d.toISOString().split("T")[0];
             dates.push(key);
             counts[key] = 0;
         }
@@ -200,7 +214,7 @@ function SurveyResultsContent({ surveyId }) {
                         {uniqueQuestions.length > 0 ? (
                             uniqueQuestions.map((qId) => (
                                 <div key={qId} className="chart-section">
-                                    <h4>{questionMap[qId]}</h4>
+                                    <h4>{questionMap[qId] || "제목 없음"}</h4>
                                     <Pie data={getPieChartData(qId)} />
                                 </div>
                             ))
