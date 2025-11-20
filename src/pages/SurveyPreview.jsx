@@ -111,35 +111,31 @@ const SurveyPreviewPage = ({
                                                 />
                                             ) : (
                                                 <Form.Group>
-                                                    {q.options.map(
-                                                        (opt, idx) => (
-                                                            <Form.Check
-                                                                key={idx}
-                                                                type={
-                                                                    surveyType ===
-                                                                    "single"
-                                                                        ? "radio"
-                                                                        : "checkbox"
-                                                                }
-                                                                label={
-                                                                    opt ||
-                                                                    `보기 ${
-                                                                        idx + 1
-                                                                    }`
-                                                                }
-                                                                name={`q-${q.id}`}
-                                                                disabled
-                                                                className="mb-2 p-2 rounded"
-                                                                style={{
-                                                                    backgroundColor:
-                                                                        "#fff",
-                                                                    boxShadow:
-                                                                        "0 1px 3px rgba(0,0,0,0.1)",
-                                                                    cursor: "default",
-                                                                }}
-                                                            />
-                                                        )
-                                                    )}
+                                                    {q.options.map((opt) => (
+                                                        <Form.Check
+                                                            key={opt.id}
+                                                            type={
+                                                                surveyType ===
+                                                                "single"
+                                                                    ? "radio"
+                                                                    : "checkbox"
+                                                            }
+                                                            label={
+                                                                opt.text ||
+                                                                "보기"
+                                                            }
+                                                            name={`q-${q.id}`}
+                                                            disabled
+                                                            className="mb-2 p-2 rounded"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    "#fff",
+                                                                boxShadow:
+                                                                    "0 1px 3px rgba(0,0,0,0.1)",
+                                                                cursor: "default",
+                                                            }}
+                                                        />
+                                                    ))}
                                                 </Form.Group>
                                             )}
                                         </div>
@@ -188,9 +184,9 @@ const SurveyPreviewPage = ({
                                             />
                                         ) : (
                                             <Form.Group>
-                                                {q.options.map((opt, idx) => (
+                                                {q.options.map((opt) => (
                                                     <Form.Check
-                                                        key={idx}
+                                                        key={opt.id}
                                                         type={
                                                             surveyType ===
                                                             "single"
@@ -198,8 +194,7 @@ const SurveyPreviewPage = ({
                                                                 : "checkbox"
                                                         }
                                                         label={
-                                                            opt ||
-                                                            `보기 ${idx + 1}`
+                                                            opt.text || "보기"
                                                         }
                                                         name={`q-${q.id}`}
                                                         disabled

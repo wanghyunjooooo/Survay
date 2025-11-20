@@ -82,24 +82,13 @@ const SurveyEditorWithAPI = forwardRef(
                             });
 
                             if (pageRes?.success) {
-                                const firstQuestion = {
-                                    id: `temp-${Date.now()}`,
-                                    text: "질문 입력",
-                                    type:
-                                        surveyType === "short"
-                                            ? "short"
-                                            : "single",
-                                    order_index: 0,
-                                    options: surveyType === "short" ? [] : [""],
-                                    isTemp: true,
-                                };
-
+                                // ✅ 페이지 초기 질문 없이 빈 배열로 설정
                                 setPages([
                                     {
                                         id: pageRes.page.page_id,
                                         title: pageRes.page.title || "페이지 1",
                                         description: "",
-                                        questions: [firstQuestion],
+                                        questions: [],
                                     },
                                 ]);
                             }
@@ -134,7 +123,6 @@ const SurveyEditorWithAPI = forwardRef(
                                         ).map((q) => {
                                             const options =
                                                 q.options?.map((o) => {
-                                                    // ✅ JSON 파싱 후 title만 사용
                                                     let parsedText = "";
                                                     try {
                                                         parsedText =
@@ -159,32 +147,8 @@ const SurveyEditorWithAPI = forwardRef(
                                             };
                                         });
 
-                                        const finalQuestions =
-                                            questions.length > 0
-                                                ? questions
-                                                : [
-                                                      {
-                                                          id: `temp-${Date.now()}`,
-                                                          text: "질문 입력",
-                                                          type:
-                                                              surveyType ===
-                                                              "short"
-                                                                  ? "short"
-                                                                  : "single",
-                                                          order_index: 0,
-                                                          options:
-                                                              surveyType ===
-                                                              "short"
-                                                                  ? []
-                                                                  : [
-                                                                        {
-                                                                            id: `temp-opt-${Date.now()}`,
-                                                                            text: "",
-                                                                        },
-                                                                    ],
-                                                          isTemp: true,
-                                                      },
-                                                  ];
+                                        // ✅ 질문이 없으면 빈 배열, 임시 질문 제거
+                                        const finalQuestions = questions;
 
                                         return {
                                             id: p.page_id,
@@ -275,7 +239,7 @@ const SurveyEditorWithAPI = forwardRef(
         }));
 
         // =======================
-        // 페이지/질문 CRUD
+        // 페이지/질문 CRUD (기존 기능 유지)
         // =======================
         const addPage = async () => {
             if (!currentSurveyId) return alert("설문을 먼저 저장하세요.");
@@ -291,27 +255,7 @@ const SurveyEditorWithAPI = forwardRef(
                             id: res.page.page_id,
                             title: res.page.title,
                             description: "",
-                            questions: [
-                                {
-                                    id: `temp-${Date.now()}`,
-                                    text: "질문 입력",
-                                    type:
-                                        surveyType === "short"
-                                            ? "short"
-                                            : "single",
-                                    order_index: 0,
-                                    options:
-                                        surveyType === "short"
-                                            ? []
-                                            : [
-                                                  {
-                                                      id: `temp-opt-${Date.now()}`,
-                                                      text: "",
-                                                  },
-                                              ],
-                                    isTemp: true,
-                                },
-                            ],
+                            questions: [], // ❌ 임시 질문 제거
                         },
                     ]);
                 }
@@ -854,7 +798,14 @@ const SurveyEditorWithAPI = forwardRef(
                                                         placeholder={`보기 ${
                                                             idx + 1
                                                         }`}
-                                                        value={opt.text}
+                                                        value={
+                                                            typeof opt.text ===
+                                                            "string"
+                                                                ? opt.text
+                                                                : JSON.stringify(
+                                                                      opt.text
+                                                                  )
+                                                        }
                                                         onChange={(e) =>
                                                             updateOptionText(
                                                                 page.id,
