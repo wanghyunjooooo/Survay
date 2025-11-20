@@ -27,16 +27,21 @@ function Home() {
         try {
             const res = await getMySurveys();
             if (res.success) {
-                const surveys = res.surveys.map((s) => ({
-                    id: s.survey_id,
-                    title: s.title,
-                    type: s.type || "single",
-                    status:
-                        s.end_date && new Date(s.end_date) > new Date()
-                            ? "진행 중"
-                            : "종료됨",
-                    endDate: s.end_date ? s.end_date.slice(0, 10) : "미정",
-                }));
+                const surveys = res.surveys
+                    .map((s) => ({
+                        id: s.survey_id,
+                        title: s.title,
+                        type: s.type || "single",
+                        status:
+                            s.end_date && new Date(s.end_date) > new Date()
+                                ? "진행 중"
+                                : "종료됨",
+                        endDate: s.end_date ? s.end_date.slice(0, 10) : "미정",
+                    }))
+                    .filter(
+                        (s) =>
+                            s.title && s.title.replace(/\s/g, "") !== "제목없음"
+                    );
                 setMySurveys(surveys);
             } else {
                 alert("설문 리스트 불러오기 실패: " + res.message);
