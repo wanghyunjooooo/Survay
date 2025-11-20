@@ -298,11 +298,18 @@ const SurveyEditorWithAPI = forwardRef(
             const page = pages.find((p) => p.id === pageId);
             if (!page) return;
 
-            const questionType = surveyType === "short" ? "short" : "single";
+            // 🔥 surveyType 기반으로 questionType 결정
+            const questionType =
+                surveyType === "short"
+                    ? "short"
+                    : surveyType === "multiple"
+                    ? "multiple"
+                    : "single";
+
             const tempQuestion = {
                 id: `temp-${Date.now()}-${Math.random()}`,
                 text: "새 질문",
-                type: questionType,
+                type: questionType, // 🔥 생성 시 타입 확정
                 order_index: page.questions.length,
                 options:
                     questionType === "short"
@@ -311,6 +318,7 @@ const SurveyEditorWithAPI = forwardRef(
                 isTemp: true,
             };
 
+            // UI에 임시 반영
             setPages((prev) =>
                 prev.map((p) =>
                     p.id === pageId
@@ -320,14 +328,16 @@ const SurveyEditorWithAPI = forwardRef(
             );
 
             try {
+                // 서버에 질문 생성 요청
                 const res = await createQuestion({
                     pageId,
                     title: tempQuestion.text,
-                    type: questionType,
+                    type: questionType, // 서버에 정확히 전달
                     order_index: tempQuestion.order_index,
                 });
 
                 if (res?.success && res.question) {
+                    // 성공 후 임시 → 실제 데이터 치환
                     setPages((prev) =>
                         prev.map((p) =>
                             p.id === pageId
@@ -361,7 +371,6 @@ const SurveyEditorWithAPI = forwardRef(
                                                                         o.text;
                                                                 }
 
-                                                                // id 중복 방지: 서버 option_id가 없거나 중복될 경우 임시 id 생성
                                                                 const safeId =
                                                                     o.option_id ||
                                                                     `temp-opt-${Date.now()}-${idx}`;
@@ -371,12 +380,10 @@ const SurveyEditorWithAPI = forwardRef(
                                                                     text: parsedText,
                                                                     order_index:
                                                                         o.order_index ??
-                                                                        idx, // order_index 없으면 idx 사용
+                                                                        idx,
                                                                 };
                                                             }
-                                                        ) ||
-                                                        [] ||
-                                                        [],
+                                                        ) || [],
                                                     isTemp: false,
                                                 }
                                               : q
@@ -386,6 +393,7 @@ const SurveyEditorWithAPI = forwardRef(
                         )
                     );
                 } else {
+                    // 서버 오류 → 임시 질문 제거
                     setPages((prev) =>
                         prev.map((p) =>
                             p.id === pageId
@@ -402,6 +410,8 @@ const SurveyEditorWithAPI = forwardRef(
                 }
             } catch (err) {
                 console.error("질문 추가 오류:", err);
+
+                // 서버 실패 → 임시 질문 제거
                 setPages((prev) =>
                     prev.map((p) =>
                         p.id === pageId
@@ -414,6 +424,7 @@ const SurveyEditorWithAPI = forwardRef(
                             : p
                     )
                 );
+
                 alert("질문 추가 실패: 서버 오류");
             }
         };
@@ -434,7 +445,6 @@ const SurveyEditorWithAPI = forwardRef(
                 )
             );
         };
-
         const handleQuestionBlur = async (pageId, questionId, qIdx) => {
             const page = pages.find((p) => p.id === pageId);
             if (!page) return;
@@ -445,9 +455,7 @@ const SurveyEditorWithAPI = forwardRef(
             try {
                 await updateQuestion(questionId, {
                     title: question.text || "제목 없음",
-                    type:
-                        question.type ||
-                        (surveyType === "short" ? "short" : "single"),
+                    type: question.type, // 🔥 오직 이거만! surveyType 절대 쓰지 말기
                     order_index: question.order_index ?? qIdx ?? 0,
                 });
             } catch (err) {

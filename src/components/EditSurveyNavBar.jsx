@@ -26,7 +26,7 @@ function EditSurveyNavBar({ onPreview, onSaveDraft, onSave }) {
                     <Button variant="outline-primary" onClick={onPreview}>
                         미리보기
                     </Button>
-                    <Button variant="outline-secondary" onClick={onSaveDraft}>
+                    <Button variant="primary" onClick={onSave}>
                         임시저장
                     </Button>
                     <Button variant="primary" onClick={onSave}>

@@ -13,13 +13,17 @@ function EditSurvey() {
     const realId = id ?? "new";
 
     // query에서 surveyType과 탭 받아오기
-    const typeFromQuery = searchParams.get("type");
+    const typeFromQuery = searchParams.get("type"); // 전페이지에서 선택한 타입 (single/multiple/short)
     const tabFromQuery = searchParams.get("tab"); // "results" 읽기
+
     const [activeTab, setActiveTab] = useState(tabFromQuery || "edit");
     const [surveyData, setSurveyData] = useState(null);
-    const [surveyType, setSurveyType] = useState(typeFromQuery || null);
-    const [loading, setLoading] = useState(true);
 
+    // surveyType: 가능한 경우 전페이지 선택(typeFromQuery)을 우선 사용.
+    // null이면 SurveyEditor 또는 유저가 명시적으로 정하도록 둡니다.
+    const [surveyType, setSurveyType] = useState(typeFromQuery ?? null);
+
+    const [loading, setLoading] = useState(true);
     const [previewMode, setPreviewMode] = useState(false);
     const [previewTab, setPreviewTab] = useState("pc");
 
@@ -56,9 +60,11 @@ function EditSurvey() {
     // 설문 불러오기
     useEffect(() => {
         const fetchSurvey = async () => {
+            // 새로운 설문인 경우: 전페이지에서 타입 지정했으면 사용, 없으면 null(편집 화면에서 선택)
             if (realId === "new") {
                 setSurveyData(null);
-                setSurveyType(typeFromQuery || "single");
+                // 이미 typeFromQuery가 있으면 유지, 없으면 null으로 두어 Editor에서 기본 처리하게 함
+                setSurveyType(typeFromQuery ?? null);
                 setLoading(false);
                 return;
             }
@@ -67,7 +73,16 @@ function EditSurvey() {
                 const res = await getSurveyById(realId);
                 if (res.success && res.survey) {
                     setSurveyData(res.survey);
-                    setSurveyType(typeFromQuery || res.survey.type || "single");
+
+                    /**
+                     * 핵심: typeFromQuery가 있으면 그것을 우선으로 사용.
+                     * 그렇지 않으면 res.survey.type이 명확히 존재할 때만 사용.
+                     * (undefined이면 null로 두어 하위 컴포넌트가 기본값을 정하도록 함)
+                     */
+                    const resolvedType =
+                        typeFromQuery ?? res.survey.type ?? null;
+                    setSurveyType(resolvedType);
+
                     // meta 기본값 초기화
                     setMeta({
                         subtitle: res.survey.subtitle || "",
@@ -86,17 +101,21 @@ function EditSurvey() {
                             (res.message || "알 수 없는 오류")
                     );
                     setSurveyData(null);
+                    // surveyType는 typeFromQuery가 있으면 유지, 없으면 null
+                    setSurveyType(typeFromQuery ?? null);
                 }
             } catch (err) {
                 console.error("설문 상세 조회 오류:", err);
                 alert("서버 오류로 설문을 불러올 수 없습니다.");
                 setSurveyData(null);
+                setSurveyType(typeFromQuery ?? null);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSurvey();
+        // realId와 typeFromQuery가 바뀌면 재실행
     }, [realId, typeFromQuery]);
 
     // 저장
@@ -124,7 +143,7 @@ function EditSurvey() {
                     surveyType={surveyType}
                     device={previewTab}
                     surveyId={realId}
-                    onClose={() => setPreviewMode(false)} // ← 여기가 핵심
+                    onClose={() => setPreviewMode(false)}
                 />
             </div>
         );
@@ -189,6 +208,8 @@ function EditSurvey() {
                             ref={surveyRef}
                             surveyId={realId}
                             surveyType={surveyType}
+                            // 하위 컴포넌트가 필요하면 surveyType을 바꿀 수 있게 setter 전달
+                            setSurveyType={setSurveyType}
                             surveyData={surveyData}
                             onChange={(data) => setSurveyData(data)}
                             meta={meta}
