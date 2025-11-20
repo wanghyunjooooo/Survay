@@ -12,7 +12,7 @@ function EditSurvey() {
     const [searchParams] = useSearchParams();
     const realId = id ?? "new";
 
-    // query에서 surveyType 받아오기
+    // query에서 surveyType과 탭 받아오기
     const typeFromQuery = searchParams.get("type");
     const tabFromQuery = searchParams.get("tab"); // "results" 읽기
     const [activeTab, setActiveTab] = useState(tabFromQuery || "edit");
@@ -25,12 +25,40 @@ function EditSurvey() {
 
     const surveyRef = useRef();
 
+    // meta 상태 추가
+    const [meta, setMeta] = useState({
+        subtitle: "",
+        cover_image: "",
+        bg_color: "#ffffff",
+        font: "",
+        start_date: "",
+        end_date: "",
+        max_participants: 0,
+        is_public: false,
+    });
+    const [preview, setPreview] = useState(null);
+
+    const handleMetaChange = (key, value) => {
+        setMeta((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            handleMetaChange("cover_image", reader.result); // base64 저장
+            setPreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
+
     // 설문 불러오기
     useEffect(() => {
         const fetchSurvey = async () => {
             if (realId === "new") {
                 setSurveyData(null);
-                setSurveyType(typeFromQuery || "single"); // 새 설문이면 query값 또는 기본 single
+                setSurveyType(typeFromQuery || "single");
                 setLoading(false);
                 return;
             }
@@ -39,7 +67,19 @@ function EditSurvey() {
                 const res = await getSurveyById(realId);
                 if (res.success && res.survey) {
                     setSurveyData(res.survey);
-                    setSurveyType(typeFromQuery || res.survey.type || "single"); // query 우선
+                    setSurveyType(typeFromQuery || res.survey.type || "single");
+                    // meta 기본값 초기화
+                    setMeta({
+                        subtitle: res.survey.subtitle || "",
+                        cover_image: res.survey.cover_image || "",
+                        bg_color: res.survey.bg_color || "#ffffff",
+                        font: res.survey.font || "",
+                        start_date: res.survey.start_date || "",
+                        end_date: res.survey.end_date || "",
+                        max_participants: res.survey.max_participants || 0,
+                        is_public: res.survey.is_public || false,
+                    });
+                    setPreview(res.survey.cover_image || null);
                 } else {
                     alert(
                         "설문 불러오기 실패: " +
@@ -149,6 +189,10 @@ function EditSurvey() {
                             surveyType={surveyType}
                             surveyData={surveyData}
                             onChange={(data) => setSurveyData(data)}
+                            meta={meta}
+                            handleMetaChange={handleMetaChange}
+                            preview={preview}
+                            handleFileChange={handleFileChange}
                         />
                     </div>
                 ) : (

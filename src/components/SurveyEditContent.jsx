@@ -30,6 +30,7 @@ const SurveyEditorWithAPI = forwardRef(
         const [pages, setPages] = useState([]);
         const [loading, setLoading] = useState(true);
         const [currentSurveyId, setCurrentSurveyId] = useState(surveyId);
+        const [preview, setPreview] = useState("");
 
         const [meta, setMeta] = useState({
             subtitle: "",
@@ -728,6 +729,18 @@ const SurveyEditorWithAPI = forwardRef(
                 )
             );
         };
+        const handleFileChange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 선택한 파일을 URL로 변환해서 미리보기
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreview(reader.result); // 미리보기
+                handleMetaChange("cover_image", reader.result); // 실제 데이터로도 전달
+            };
+            reader.readAsDataURL(file);
+        };
 
         if (loading) return <div>로딩 중...</div>;
 
@@ -917,19 +930,25 @@ const SurveyEditorWithAPI = forwardRef(
                                 }
                             />
                         </Form.Group>
-
                         <Form.Group className="mb-2">
-                            <Form.Label>커버 이미지 URL</Form.Label>
+                            <Form.Label>커버 이미지</Form.Label>
                             <Form.Control
-                                type="text"
-                                value={meta.cover_image}
-                                onChange={(e) =>
-                                    handleMetaChange(
-                                        "cover_image",
-                                        e.target.value
-                                    )
-                                }
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
                             />
+                            {preview && (
+                                <div style={{ marginTop: "10px" }}>
+                                    <img
+                                        src={preview}
+                                        alt="미리보기"
+                                        style={{
+                                            maxWidth: "300px",
+                                            maxHeight: "200px",
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </Form.Group>
 
                         <Form.Group className="mb-2">
