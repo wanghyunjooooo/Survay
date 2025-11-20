@@ -123,6 +123,8 @@ function EditSurvey() {
                     surveyData={surveyData}
                     surveyType={surveyType}
                     device={previewTab}
+                    surveyId={realId}
+                    onClose={() => setPreviewMode(false)} // ← 여기가 핵심
                 />
             </div>
         );

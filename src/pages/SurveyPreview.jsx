@@ -1,31 +1,43 @@
+// src/pages/SurveyPreview.jsx
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { Container, Card, Form, Nav, Tab, Button } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const SurveyPreviewPage = ({
     surveyData,
     surveyType,
+    surveyId,
     defaultDevice = "pc",
+    onClose, // EditSurvey에서 전달받는 prop
 }) => {
-    const navigate = useNavigate();
     const [activeDevice, setActiveDevice] = React.useState(defaultDevice);
 
     if (!surveyData)
         return <div className="container py-5">설문 데이터 없음</div>;
+
+    const questionCardStyle = {
+        padding: "15px",
+        borderRadius: "12px",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+        backgroundColor: "#f8f9fa",
+        marginBottom: "15px",
+    };
+
+    const textInputStyle = {
+        backgroundColor: "#fff",
+        borderRadius: "8px",
+        boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+    };
 
     return (
         <Container className="py-5">
             <div className="d-flex justify-content-end mb-3">
                 <Button
                     variant="secondary"
-                    onClick={() =>
-                        navigate(
-                            `/edit-survey/${
-                                surveyData?.id || surveyData?.survey_id
-                            }`
-                        )
-                    }
+                    onClick={() => {
+                        console.log("미리보기 종료 클릭됨");
+                        if (onClose) onClose(); // EditSurvey에서 previewMode false로 변경
+                    }}
                 >
                     미리보기 종료
                 </Button>
@@ -59,9 +71,14 @@ const SurveyPreviewPage = ({
                 </Nav>
 
                 <Tab.Content>
+                    {/* PC */}
                     <Tab.Pane eventKey="pc">
                         {surveyData.pages.map((page, pageIdx) => (
-                            <Card key={page.id} className="mb-4 shadow-sm">
+                            <Card
+                                key={page.id}
+                                className="mb-4 shadow-sm"
+                                style={{ borderRadius: "15px" }}
+                            >
                                 <Card.Body>
                                     <Card.Title className="mb-3">
                                         <span className="badge bg-primary me-2">
@@ -76,19 +93,21 @@ const SurveyPreviewPage = ({
                                     )}
 
                                     {page.questions.map((q, qIdx) => (
-                                        <Card
+                                        <div
                                             key={q.id}
-                                            className="mb-3 p-3 border-0 shadow-sm"
+                                            style={questionCardStyle}
                                         >
                                             <p className="fw-bold mb-2">
                                                 {qIdx + 1}. {q.text}
                                             </p>
+
                                             {surveyType === "short" ? (
                                                 <Form.Control
                                                     type="text"
                                                     placeholder="답변을 입력하세요"
                                                     readOnly
                                                     className="mb-2"
+                                                    style={textInputStyle}
                                                 />
                                             ) : (
                                                 <Form.Group>
@@ -110,24 +129,32 @@ const SurveyPreviewPage = ({
                                                                 }
                                                                 name={`q-${q.id}`}
                                                                 disabled
-                                                                className="mb-1"
+                                                                className="mb-2 p-2 rounded"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        "#fff",
+                                                                    boxShadow:
+                                                                        "0 1px 3px rgba(0,0,0,0.1)",
+                                                                    cursor: "default",
+                                                                }}
                                                             />
                                                         )
                                                     )}
                                                 </Form.Group>
                                             )}
-                                        </Card>
+                                        </div>
                                     ))}
                                 </Card.Body>
                             </Card>
                         ))}
                     </Tab.Pane>
 
+                    {/* 모바일 */}
                     <Tab.Pane eventKey="mobile">
                         {surveyData.pages.map((page, pageIdx) => (
                             <div
                                 key={page.id}
-                                className="mx-auto p-3 mb-4"
+                                className="mx-auto mb-4"
                                 style={{
                                     width: "375px",
                                     border: "1px solid #ccc",
@@ -146,19 +173,18 @@ const SurveyPreviewPage = ({
                                     </p>
                                 )}
                                 {page.questions.map((q, qIdx) => (
-                                    <Card
-                                        key={q.id}
-                                        className="mb-3 p-3 border-0 shadow-sm"
-                                    >
+                                    <div key={q.id} style={questionCardStyle}>
                                         <p className="fw-bold mb-2">
                                             {qIdx + 1}. {q.text}
                                         </p>
+
                                         {surveyType === "short" ? (
                                             <Form.Control
                                                 type="text"
                                                 placeholder="답변을 입력하세요"
                                                 readOnly
                                                 className="mb-2"
+                                                style={textInputStyle}
                                             />
                                         ) : (
                                             <Form.Group>
@@ -177,12 +203,19 @@ const SurveyPreviewPage = ({
                                                         }
                                                         name={`q-${q.id}`}
                                                         disabled
-                                                        className="mb-1"
+                                                        className="mb-2 p-2 rounded"
+                                                        style={{
+                                                            backgroundColor:
+                                                                "#fff",
+                                                            boxShadow:
+                                                                "0 1px 3px rgba(0,0,0,0.1)",
+                                                            cursor: "default",
+                                                        }}
                                                     />
                                                 ))}
                                             </Form.Group>
                                         )}
-                                    </Card>
+                                    </div>
                                 ))}
                             </div>
                         ))}
