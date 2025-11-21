@@ -1,0 +1,58 @@
+.home-container {
+    font-family: "Pretendard", sans-serif;
+}
+
+.text-primary {
+    color: #0047f9 !important;
+}
+
+.home-card {
+    transition: all 0.25s ease;
+}
+
+.home-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 71, 249, 0.2);
+}
+
+.survey-card {
+    background-color: #f8f7fc;
+    transition: all 0.25s ease;
+}
+
+.survey-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 71, 249, 0.2);
+}
+
+.btn-outline-primary {
+    color: #0047f9;
+    border-color: #0047f9;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0047f9;
+    color: white;
+}
+
+.btn-outline-secondary {
+    border-color: #888;
+    color: #555;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #888;
+    color: white;
+}
+/* 리스트 항목 사이 간격 */
+.survey-list .survey-list-item {
+    margin-bottom: 0.75rem; /* 리스트 항목 사이 간격 */
+    padding: 1rem 1.25rem; /* 패딩 증가로 가독성 향상 */
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* 마지막 항목 아래 간격 제거 */
+.survey-list .survey-list-item:last-child {
+    margin-bottom: 0;
+}
